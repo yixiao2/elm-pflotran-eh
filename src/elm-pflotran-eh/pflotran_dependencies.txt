@@ -7,7 +7,7 @@ mapping.o : \
   input_aux.o \
   grid.o
 pflotran_elm_main.o : \
-  mapping.o elmpf_interface_data.o
+  mapping.o elmpf_interface_data.o \
   geodesic.o \
   factory_pflotran.o \
   factory_subsurface.o \

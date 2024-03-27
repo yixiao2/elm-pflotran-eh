@@ -22,10 +22,7 @@ ${common_src}communicator_aux.o \
 	${common_src}variables.o
 
 deriv_obj = \
-	${common_src}toil_ims_derivs.o \
-	${common_src}general_derivative.o \
-	${common_src}derivative_tests.o \
-	${common_src}derivatives_utilities.o
+	${common_src}general_derivative.o
 
 # DO NOT place any object files that depend on the discretization within 
 # util_obj
@@ -213,7 +210,6 @@ misc_obj = \
 	${common_src}matrix_buffer.o \
 	${common_src}observation.o \
 	${common_src}patch.o \
-	${common_src}pmc_auxiliary.o \
 	${common_src}pmc_base.o \
 	${common_src}pmc_subsurface.o \
 	${common_src}pmc_subsurface_osrt.o \
@@ -231,32 +227,11 @@ misc_obj = \
 	${common_src}strata.o \
 	${common_src}timestepper_base.o \
 	${common_src}timestepper_KSP.o \
-	${common_src}timestepper_BE.o \
-	${common_src}timestepper_steady.o \
 	${common_src}timestepper_TS.o \
 	${common_src}transport.o \
 	${common_src}upwind_direction.o \
 	${common_src}waypoint.o \
 	${common_src}wipp.o
-
-surface_obj = \
-	${common_src}checkpoint_surface.o \
-	${common_src}factory_surface.o \
-	${common_src}factory_surfsubsurface.o \
-	${common_src}init_surface.o \
-	${common_src}pmc_surface.o \
-	${common_src}simulation_surface.o \
-	${common_src}simulation_surfsubsurface.o \
-	${common_src}surface_auxiliary.o \
-	${common_src}surface_field.o \
-	${common_src}surface_flow.o \
-	${common_src}surface_global_aux.o \
-	${common_src}surface_global.o \
-	${common_src}surface_material.o \
-	${common_src}realization_surface.o \
-	${common_src}surface_th_aux.o \
-	${common_src}surface_th.o \
-	${common_src}timestepper_surface.o
 
 geomech_obj = \
 	${common_src}factory_geomechanics.o \

@@ -11,8 +11,6 @@ pflotran_elm_main.o : \
   geodesic.o \
   factory_pflotran.o \
   factory_subsurface.o \
-  factory_surface.o \
-  factory_surfsubsurface.o \
   option.o \
   output_aux.o \
   pflotran_constants.o \

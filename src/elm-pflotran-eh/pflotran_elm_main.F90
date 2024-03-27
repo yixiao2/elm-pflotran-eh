@@ -15,7 +15,7 @@ module pflotran_elm_main_module
   use PFLOTRAN_Constants_module
   use Option_module, only : option_type
   use Simulation_Base_class, only : simulation_base_type
-  use Multi_Simulation_module, only : multi_simulation_type
+  !use Multi_Simulation_module, only : multi_simulation_type
   use Realization_Base_class, only : realization_base_type
 
   use Mapping_module
@@ -23,14 +23,19 @@ module pflotran_elm_main_module
 
   use Utility_module, only : where_checkerr
 
+  use Driver_class!?only?
+
   implicit none
 
   private
 
   type, public :: pflotran_model_type
     class(simulation_base_type),  pointer :: simulation
-    type(multi_simulation_type), pointer :: multisimulation
-    type(option_type),      pointer :: option
+    !type(multi_simulation_type), pointer :: multisimulation
+    !type(option_type),      pointer :: option
+    class(driver_type), pointer :: driver
+    PetscInt :: iflag
+
     PetscReal :: pause_time_1
     PetscReal :: pause_time_2
     type(mapping_type),                pointer :: map_elm_sub_to_pf_sub
@@ -104,6 +109,7 @@ contains
   ! 
   ! Author: Gautam Bisht
   ! Date: 9/10/2010
+  ! Revised by Yi Xiao, PNNL, @March 2024
   ! 
 
     use Option_module
@@ -125,13 +131,16 @@ contains
 
     allocate(model)
 
-    nullify(model%simulation)
-    nullify(model%multisimulation)
-    nullify(model%option)
+    !nullify(model%simulation)
+    !nullify(model%multisimulation)
+    !nullify(model%option)
+    driver => DriverCreate()
+    call FactoryPFLOTRANInitialize(driver, model%simulation)
+
 
     model%option => OptionCreate()
     call OptionInitMPI(model%option, mpicomm)
-    call PFLOTRANInitializePrePetsc(model%multisimulation, model%option)
+    !call PFLOTRANInitializePrePetsc(model%multisimulation, model%option)
 
     ! NOTE(bja) 2013-06-25 : external driver must provide an input
     ! prefix string. If the driver wants to use pflotran.in, then it
@@ -166,7 +175,7 @@ contains
     PETSC_COMM_SELF = MPI_COMM_SELF
     PETSC_COMM_WORLD = MPI_COMM_WORLD
 
-    call PFLOTRANInitializePostPetsc(model%simulation, model%multisimulation, model%option)
+    !call PFLOTRANInitializePostPetsc(model%simulation, model%multisimulation, model%option)
 
     model%pause_time_1 = -1.0d0
     model%pause_time_2 = -1.0d0

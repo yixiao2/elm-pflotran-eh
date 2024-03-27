@@ -13,7 +13,6 @@ pflotran_elm_main.o : \
   factory_subsurface.o \
   factory_surface.o \
   factory_surfsubsurface.o \
-  multisimulation.o \
   option.o \
   output_aux.o \
   pflotran_constants.o \

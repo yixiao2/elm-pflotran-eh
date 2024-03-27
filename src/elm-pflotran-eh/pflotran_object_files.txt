@@ -139,8 +139,6 @@ grid_obj = \
 	${common_src}discretization.o \
 	${common_src}dm_kludge.o \
 	${common_src}grid.o \
-	${common_src}grid_grdecl.o \
-	${common_src}grid_grdecl_util.o \
 	${common_src}grid_structured.o \
 	${common_src}grid_unstructured_cell.o \
 	${common_src}grid_unstructured_explicit.o \
@@ -153,7 +151,6 @@ relations_obj = \
 	${common_src}characteristic_curves.o \
 	${common_src}characteristic_curves_base.o \
 	${common_src}characteristic_curves_common.o \
-	${common_src}characteristic_curves_owg.o \
 	${common_src}characteristic_curves_wipp.o \
 	${common_src}characteristic_curves_thermal.o \
 	${common_src}mphase_pckr_mod.o

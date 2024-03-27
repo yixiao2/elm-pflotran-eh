@@ -26,6 +26,17 @@ pflotran_elm_setmapping.o : \
 # elm_rspfuncs and reaction_sandbox_xx
 elm_rspfuncs.o : \
   pflotran_constants.o
+dataset_global_hdf5_list.o : \
+  pflotran_constants.o \
+  data_mediator_base.o \
+  dataset_global_hdf5.o \
+  option.o \
+  input_aux.o \
+  string.o \
+  data_mediator_dataset.o\
+  discretization.o \
+  dataset_base.o \
+  dataset_common_hdf5.o
 # the subroutine for geodesic functions (author: C. F. F. Karney)
 # used to convert bwt lat/lon grids and metric-system meshs
 geodesic.o :

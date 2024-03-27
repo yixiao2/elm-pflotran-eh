@@ -248,11 +248,6 @@ misc_obj = \
 	${common_src}waypoint.o \
 	${common_src}wipp.o
 
-well_obj = \
-	${common_src}well_data.o \
-	${common_src}well_type.o \
-	${common_src}well_solver.o
-
 surface_obj = \
 	${common_src}checkpoint_surface.o \
 	${common_src}factory_surface.o \

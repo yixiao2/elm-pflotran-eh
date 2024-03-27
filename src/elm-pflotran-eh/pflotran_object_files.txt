@@ -167,7 +167,6 @@ dataset_obj = \
 	${common_src}dataset_map_hdf5.o \
 	${common_src}dataset.o \
 	${common_src}dataset_gridded_hdf5.o \
-	${common_src}dataset_global_hdf5_list.o \
 	${common_src}time_storage.o 
 
 srcsink_obj = \
@@ -301,5 +300,14 @@ elmpf_interface_obj = \
 	${common_src}pflotran_elm_setmapping.o \
 	${common_src}elmpf_interface_data.o \
 	${common_src}mapping.o \
-	${common_src}geodesic.o
+	${common_src}geodesic.o \
+	${common_src}elm_rspfuncs.o \
+	${common_src}dataset_global_hdf5_list.o \
+	${common_src}reaction_sandbox_degas.o \
+	${common_src}reaction_sandbox_denitr.o \
+	${common_src}reaction_sandbox_langmu.o \
+	${common_src}reaction_sandbox_microbial.o \
+	${common_src}reaction_sandbox_nitrif.o \
+	${common_src}reaction_sandbox_plantn.o \
+	${common_src}reaction_sandbox_somdec.o
 

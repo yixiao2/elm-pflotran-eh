@@ -23,6 +23,9 @@ pflotran_elm_main.o : \
 pflotran_elm_setmapping.o : \
   pflotran_elm_main.o \
   mapping.o
+# elm_rspfuncs and reaction_sandbox_xx
+elm_rspfuncs.o : \
+  pflotran_constants.o
 # the subroutine for geodesic functions (author: C. F. F. Karney)
 # used to convert bwt lat/lon grids and metric-system meshs
 geodesic.o :

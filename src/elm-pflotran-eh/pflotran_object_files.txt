@@ -2,7 +2,9 @@
 
 # DO NOT place any object files that depend on the discretization within 
 # util_obj
-util_obj  = \
+util_obj = \
+${common_src}communicator_aux.o \
+	${common_src}driver.o \
 	${common_src}generic.o \
 	${common_src}input_aux.o \
 	${common_src}logging.o \

@@ -333,14 +333,14 @@ contains
     word = 's'
     internal_units = 'sec'
     waypoint => WaypointCreate()
-    waypoint%time              = waypoint_time * UnitsConvertToInternal(word, internal_units, option)
+    waypoint%time              = waypoint_time * UnitsConvertToInternal(word, internal_units, '', option)
     waypoint%update_conditions = PETSC_FALSE
     waypoint%print_snap_output = isprintout
     waypoint%print_obs_output  = PETSC_FALSE
     waypoint%print_checkpoint  = PETSC_FALSE
     waypoint%print_msbl_output = PETSC_FALSE
     waypoint%final             = waypoint_final
-    waypoint%dt_max            = waypoint_dtmax * UnitsConvertToInternal(word, internal_units, option)
+    waypoint%dt_max            = waypoint_dtmax * UnitsConvertToInternal(word, internal_units, '', option)
 
     if(waypoint_final) then
       waypoint%print_snap_output = PETSC_TRUE
@@ -404,7 +404,7 @@ contains
     word = 's'
     internal_units = 'sec'
     waypoint => WaypointCreate()
-    waypoint%time              = waypoint_time * UnitsConvertToInternal(word, internal_units, option)
+    waypoint%time              = waypoint_time * UnitsConvertToInternal(word, internal_units, '',option)
     waypoint%update_conditions = PETSC_TRUE
     waypoint%dt_max            = 86400.0d0
 

@@ -573,7 +573,7 @@ subroutine SomDecRead(this,input,option)
                 call InputDefaultMsg(input,option)
               else
                 rate_constant = rate_constant * &
-                  UnitsConvertToInternal(word,internal_units,option)
+                  UnitsConvertToInternal(word,internal_units,'',option)
               endif
             case('TURNOVER_TIME')
               internal_units = 'sec'
@@ -586,7 +586,7 @@ subroutine SomDecRead(this,input,option)
                 call InputDefaultMsg(input,option)
               else
                 turnover_time = turnover_time * &
-                  UnitsConvertToInternal(word,internal_units,option)
+                  UnitsConvertToInternal(word,internal_units,'',option)
               endif
             case('RATE_DECOMPOSITION')
               internal_units = '1/sec'
@@ -599,7 +599,7 @@ subroutine SomDecRead(this,input,option)
                 call InputDefaultMsg(input,option)
               else
                 rate_decomposition = rate_decomposition * &
-                  UnitsConvertToInternal(word,internal_units,option)
+                  UnitsConvertToInternal(word,internal_units,'',option)
               endif
             case('RATE_AD_FACTOR')
               call InputReadDouble(input,option,rate_ad_factor)

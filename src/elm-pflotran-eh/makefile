@@ -236,10 +236,10 @@ include $(SRC_DIR)/pflotran_object_files.txt
 
 # Concatentate dependency groups 
 pflotran_base_obj = $(util_obj) $(eos_obj) $(mode_aux_obj) $(mode_obj) \
-	$(shared_mode_aux_obj) $(chem_obj) $(geomech_obj) \
+	$(shared_mode_aux_obj) $(chem_obj) $(geomech_obj) $(geophysics_obj) \
 	$(grid_obj) $(relations_obj) $(properties_obj) $(dataset_obj) \
-	$(srcsink_obj) $(io_obj) $(misc_obj) $(surface_obj) $(solver_obj) \
-	$(deriv_obj)
+	$(srcsink_obj) $(io_obj) $(misc_obj) $(solver_obj) \
+	$(deriv_obj) $(mode_process_model_obj)
 
 # PFLOTRAN as a library for coupling with ELM
 # source files to be copied/linked from $(pflotran_src) to $SRC_DIR

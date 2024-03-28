@@ -1877,7 +1877,7 @@ contains
                                     elm_pf_idata%pcwmax_elms)
 
     ! reference pressure
-    elm_pf_idata%pressure_reference = option%reference_pressure
+    elm_pf_idata%pressure_reference = option%flow%reference_pressure
 
   end subroutine pflotranModelGetSoilPropFromPF
 
@@ -5067,7 +5067,7 @@ subroutine pflotranModelSetInternalTHStatesfromELM(pflotran_model, PRESSURE_DATA
          xx_loc_p(istart)  = soilpress_pf_loc(veclocal_id)
 
          ! may need to recalculate 'saturation' from pressure
-         capillary_pressure = option%reference_pressure - xx_loc_p(istart)
+         capillary_pressure = option%flow%reference_pressure - xx_loc_p(istart)
          select type(sf => characteristic_curves%saturation_function)
            !class is(sat_func_VG_type)
              ! not-yet (TODO)
@@ -5090,7 +5090,7 @@ subroutine pflotranModelSetInternalTHStatesfromELM(pflotran_model, PRESSURE_DATA
            class is(sat_func_BC_type)
              call sf%CapillaryPressure(liquid_saturation, capillary_pressure, dx, option)
 
-             xx_loc_p(istart) = option%reference_pressure - capillary_pressure
+             xx_loc_p(istart) = option%flow%reference_pressure - capillary_pressure
 
            class default
              option%io_buffer = 'Currently ONLY support Brooks_COREY saturation function type' // &
@@ -5102,7 +5102,7 @@ subroutine pflotranModelSetInternalTHStatesfromELM(pflotran_model, PRESSURE_DATA
 
        !
        global_auxvars(ghosted_id)%sat(1)  = liquid_saturation
-       global_auxvars(ghosted_id)%pres(1) = option%reference_pressure - capillary_pressure
+       global_auxvars(ghosted_id)%pres(1) = option%flow%reference_pressure - capillary_pressure
        if (option%iflowmode .eq. TH_MODE)  then
          xx_loc_p(istart+1)= soilt_pf_loc(veclocal_id)
        end if
@@ -5397,7 +5397,7 @@ end subroutine pflotranModelSetInternalTHStatesfromELM
         if(StringCompare(boundary_condition%name,'elm_exfiltration_bc')) then
           if (boundary_condition%flow_condition%itype(press_dof) == HYDROSTATIC_SEEPAGE_BC) then
             boundary_condition%flow_aux_real_var(press_dof,iconn) = &
-              max(option%reference_pressure, press_maxponding_pf_loc(iconn))
+              max(option%flow%reference_pressure, press_maxponding_pf_loc(iconn))
           endif
         endif
 

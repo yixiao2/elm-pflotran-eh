@@ -287,8 +287,8 @@ subroutine degasReact(this,Residual,Jacobian,compute_derivative, &
   endif
 
   !default values for calculating gas solubility
-  tc = option%reference_temperature
-  air_press = option%reference_pressure
+  tc = option%flow%reference_temperature
+  air_press = option%flow%reference_pressure
   lsat = 0.50d0  ! 50% saturation assumed as default
   isat = 0.d0
 
@@ -330,7 +330,7 @@ subroutine degasReact(this,Residual,Jacobian,compute_derivative, &
 
     c_co2_aq = rt_auxvar%total(this%ispec_co2a, iphase)
 
-    co2_p = 350.0d-6 * option%reference_pressure
+    co2_p = 350.0d-6 * option%flow%reference_pressure
 #ifdef ELM_PFLOTRAN
     ! resetting 'co2g' from CLM after adjusting
     if (this%ispec_co2g > 0) then
@@ -386,7 +386,7 @@ subroutine degasReact(this,Residual,Jacobian,compute_derivative, &
 
     c_n2o_aq = rt_auxvar%total(this%ispec_n2oa, iphase)
 
-    n2o_p = 310.0d-9 * option%reference_pressure                        ! default (310 ppbv N2O in atm. in about 1990s)
+    n2o_p = 310.0d-9 * option%flow%reference_pressure                        ! default (310 ppbv N2O in atm. in about 1990s)
 #ifdef ELM_PFLOTRAN
     ! resetting 'n2og' from CLM after adjusting via 'N2Oimm'
     if (this%ispec_n2og > 0) then
@@ -435,7 +435,7 @@ subroutine degasReact(this,Residual,Jacobian,compute_derivative, &
 
     c_n2_aq = rt_auxvar%total(this%ispec_n2a, iphase)                   ! M (mole-N/L)
 
-    n2_p = 0.78084d0 * option%reference_pressure                        ! default
+    n2_p = 0.78084d0 * option%flow%reference_pressure                        ! default
 #ifdef ELM_PFLOTRAN
     ! resetting 'n2g' from CLM after adjusting via 'N2imm'
     if (this%ispec_n2g > 0) then

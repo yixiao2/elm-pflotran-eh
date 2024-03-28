@@ -615,7 +615,7 @@ contains
     use Grid_Structured_module
     use Option_module
     use Material_module
-    use Material_Aux_class
+    use Material_Aux_module
 
     use Simulation_Subsurface_class, only : simulation_subsurface_type
     use Realization_Subsurface_class, only : realization_subsurface_type
@@ -1035,7 +1035,7 @@ contains
     use Grid_module
     use Field_module
     use Material_module
-    use Material_Aux_class
+    use Material_Aux_module
     use Coupler_module
     use Connection_module
     use Init_Subsurface_module
@@ -1542,7 +1542,7 @@ contains
     use Field_module
     use Option_module
     use Material_module
-    use Material_Aux_class
+    use Material_Aux_module
     use Variables_module, only : PERMEABILITY_X, PERMEABILITY_Y, &
                                PERMEABILITY_Z, POROSITY
 
@@ -3904,7 +3904,7 @@ write(option%myrank+200,*) 'checking pflotran-model 2 (PF->ELM lsat):  ', &
   subroutine pflotranModelGetBgcVariablesFromPF(pflotran_model)
 
     use Global_Aux_module
-    use Material_Aux_class
+    use Material_Aux_module
     use Realization_Base_class
     use Patch_module
     use Grid_module
@@ -4911,7 +4911,7 @@ subroutine pflotranModelSetInternalTHStatesfromELM(pflotran_model, PRESSURE_DATA
     use Field_module
     use Discretization_module
     use TH_Aux_module
-    use Material_Aux_class
+    use Material_Aux_module
     use Global_Aux_module
 
     use Realization_Base_class
@@ -5467,7 +5467,7 @@ end subroutine pflotranModelSetInternalTHStatesfromELM
     use Coupler_module
     use Patch_module
     use Grid_module
-    use Material_Aux_class
+    use Material_Aux_module
     use Option_module
     use String_module
 
@@ -5630,7 +5630,7 @@ end subroutine pflotranModelSetInternalTHStatesfromELM
 
     use Patch_module
     use Grid_module
-    use Material_Aux_class
+    use Material_Aux_module
     use Option_module
     use String_module
 
@@ -6037,7 +6037,7 @@ end subroutine pflotranModelSetInternalTHStatesfromELM
     use Realization_Subsurface_class, only : realization_subsurface_type
 
     use Global_Aux_module
-    use Material_Aux_class
+    use Material_Aux_module
     use Reactive_Transport_Aux_module
     use Reaction_Aux_module
 

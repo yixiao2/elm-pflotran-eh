@@ -1507,7 +1507,7 @@ subroutine SomDecReact(this,Residual,Jacobian,compute_derivative,rt_auxvar, &
 ! ----------------------------------------------------------------------------!
   use Option_module
   use Reaction_Aux_module
-  use Material_Aux_class, only : material_auxvar_type
+  use Material_Aux_module, only : material_auxvar_type
 
 #ifdef ELM_PFLOTRAN
   use petscvec
@@ -1915,7 +1915,7 @@ subroutine SomDecReact1(this,Residual,Jacobian,compute_derivative, reaction,  &
 ! ----------------------------------------------------------------------------!
   use Option_module
   use Reaction_Aux_module
-  use Material_Aux_class, only : material_auxvar_type
+  use Material_Aux_module, only : material_auxvar_type
 
   implicit none
 
@@ -2424,7 +2424,7 @@ subroutine SomDecReact2(this,Residual,Jacobian,compute_derivative, reaction, &
 ! ----------------------------------------------------------------------------!
   use Option_module
   use Reaction_Aux_module
-  use Material_Aux_class, only : material_auxvar_type
+  use Material_Aux_module, only : material_auxvar_type
 
   implicit none
 
@@ -3475,7 +3475,7 @@ subroutine SomDecNemission(this,Residual,Jacobian,compute_derivative,rt_auxvar, 
 ! ----------------------------------------------------------------------------!
   use Option_module
   use Reaction_Aux_module
-  use Material_Aux_class, only : material_auxvar_type
+  use Material_Aux_module, only : material_auxvar_type
 
   implicit none
 

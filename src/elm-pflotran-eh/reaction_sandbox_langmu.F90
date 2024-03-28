@@ -187,7 +187,7 @@ subroutine LangmuirReact(this,Residual,Jacobian,compute_derivative, &
 
   use Option_module
   use Reaction_Aux_module
-  use Material_Aux_class, only : material_auxvar_type
+  use Material_Aux_module, only : material_auxvar_type
   use ELM_RspFuncs_module
 
   implicit none

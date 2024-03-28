@@ -8,13 +8,13 @@ module Reaction_Sandbox_Nitrif_class
   use Reactive_Transport_Aux_module
   use PFLOTRAN_Constants_module
   use Utility_module, only : HFunctionSmooth
-  
+
   implicit none
-  
+
   private
-  
+
   PetscInt, parameter :: TEMPERATURE_RESPONSE_FUNCTION_CLMCN = 1
-  PetscInt, parameter :: TEMPERATURE_RESPONSE_FUNCTION_Q10 = 2 
+  PetscInt, parameter :: TEMPERATURE_RESPONSE_FUNCTION_Q10 = 2
 
   type, public, &
     extends(reaction_sandbox_base_type) :: reaction_sandbox_nitrif_type
@@ -45,14 +45,14 @@ contains
 ! ************************************************************************** !
 !
 ! NitrifCreate: Allocates nitrification reaction object.
-! author: Guoping Tang (replace in all subroutine headers with name of developer) 
+! author: Guoping Tang (replace in all subroutine headers with name of developer)
 ! date: 09/09/2013 (replace in all subroutine headers with current date)
 !
 ! ************************************************************************** !
 function NitrifCreate()
 
   implicit none
-  
+
   class(reaction_sandbox_nitrif_type), pointer :: NitrifCreate
 
 ! 4. Add code to allocate object and initialized all variables to zero and
@@ -70,7 +70,7 @@ function NitrifCreate()
   NitrifCreate%Q10 = 1.5d0
   NitrifCreate%x0eps = 1.0d-20
   nullify(NitrifCreate%next)
-      
+
 end function NitrifCreate
 
 ! ************************************************************************** !
@@ -84,17 +84,17 @@ subroutine NitrifRead(this,input,option)
   use String_module
   use Input_Aux_module
   use Units_module, only : UnitsConvertToInternal
-  
+
   implicit none
-  
+
   class(reaction_sandbox_nitrif_type) :: this
   type(input_type), pointer :: input
   type(option_type) :: option
 
   PetscInt :: i
   character(len=MAXWORDLENGTH) :: word
-  
-  do 
+
+  do
     call InputReadPflotranString(input,option)
     if (InputError(input)) exit
     if (InputCheckExit(input,option)) exit
@@ -102,7 +102,7 @@ subroutine NitrifRead(this,input,option)
     call InputReadWord(input,option,word,PETSC_TRUE)
     call InputErrorMsg(input,option,'keyword', &
                        'CHEMISTRY,REACTION_SANDBOX,NITRIFICATION')
-    call StringToUpper(word)   
+    call StringToUpper(word)
 
     select case(trim(word))
       case('TEMPERATURE_RESPONSE_FUNCTION')
@@ -114,14 +114,14 @@ subroutine NitrifRead(this,input,option)
           call InputReadWord(input,option,word,PETSC_TRUE)
           call InputErrorMsg(input,option,'keyword', &
                        'CHEMISTRY,REACTION_SANDBOX,NITRIFICATION,TEMPERATURE RESPONSE FUNCTION')
-          call StringToUpper(word)   
+          call StringToUpper(word)
 
           select case(trim(word))
             case('CLMCN')
               this%temperature_response_function = TEMPERATURE_RESPONSE_FUNCTION_CLMCN
             case('Q10')
-              this%temperature_response_function = TEMPERATURE_RESPONSE_FUNCTION_Q10    
-              call InputReadDouble(input,option,this%Q10)  
+              this%temperature_response_function = TEMPERATURE_RESPONSE_FUNCTION_Q10
+              call InputReadDouble(input,option,this%Q10)
               call InputErrorMsg(input,option,'Q10', &
                 'CHEMISTRY,REACTION_SANDBOX_NITRIFICATION,TEMPERATURE RESPONSE FUNCTION')
             case default
@@ -129,7 +129,7 @@ subroutine NitrifRead(this,input,option)
                 trim(word) // ' not recognized - Valid keyword: "CLMCN","Q10"'
               call printErrMsg(option)
           end select
-        enddo 
+        enddo
      case('X0EPS')
         call InputReadDouble(input,option,this%x0eps)
         call InputErrorMsg(input,option,'x0eps', &
@@ -152,7 +152,7 @@ subroutine NitrifRead(this,input,option)
           call printErrMsg(option)
     end select
   enddo
-  
+
 end subroutine NitrifRead
 
 ! ************************************************************************** !
@@ -168,7 +168,7 @@ subroutine NitrifSetup(this,reaction,option)
   use Reaction_Immobile_Aux_module, only : GetImmobileSpeciesIDFromName
 
   implicit none
-  
+
   class(reaction_sandbox_nitrif_type) :: this
   class(reaction_rt_type) :: reaction
   type(option_type) :: option
@@ -227,7 +227,7 @@ subroutine NitrifSetup(this,reaction,option)
   endif
 #endif
 
- 
+
 end subroutine NitrifSetup
 
 ! ************************************************************************** !
@@ -248,7 +248,7 @@ subroutine NitrifReact(this,Residual,Jacobian,compute_derivative, &
   use petscvec
   use elmpf_interface_data
 #endif
-  
+
   implicit none
 
   class(reaction_sandbox_nitrif_type) :: this
@@ -256,7 +256,7 @@ subroutine NitrifReact(this,Residual,Jacobian,compute_derivative, &
   class(reaction_rt_type) :: reaction
   type(reactive_transport_auxvar_type) :: rt_auxvar
   type(global_auxvar_type) :: global_auxvar
-  class(material_auxvar_type) :: material_auxvar
+  type(material_auxvar_type) :: material_auxvar
 
   PetscBool :: compute_derivative
   PetscReal :: Residual(reaction%ncomp)
@@ -363,7 +363,7 @@ subroutine NitrifReact(this,Residual,Jacobian,compute_derivative, &
      temp_real = c_nh4*c_nh4/(c_nh4+4.0d0) * dfeps0_dx + &
                  c_nh4*(c_nh4+8.0d0)/(c_nh4+4.0d0)/(c_nh4+4.0d0) * feps0
      drate_nitri_dnh4 = this%k_nitr_max*f_t*f_w*volume * temp_real
- 
+
      Jacobian(ires_nh4,ires_nh4) = Jacobian(ires_nh4,ires_nh4) + drate_nitri_dnh4 * &
         rt_auxvar%aqueous%dtotal(this%ispec_nh4,this%ispec_nh4,iphase)
 
@@ -426,7 +426,7 @@ subroutine NitrifReact(this,Residual,Jacobian,compute_derivative, &
 
        Residual(ires_nh4) = Residual(ires_nh4) + rate_n2o
        Residual(ires_n2o) = Residual(ires_n2o) - 0.5d0 * rate_n2o
-       
+
        if(this%ispec_ngasnit > 0) then
           Residual(ires_ngasnit) = Residual(ires_ngasnit) - rate_n2o
        endif
@@ -445,7 +445,7 @@ subroutine NitrifReact(this,Residual,Jacobian,compute_derivative, &
                        0.0105d0*M_2_ug_per_g*exp(-0.0105d0*c_nh4_ugg)  !d(1.0-exp(-0.0105d0*c_nh4*m_2_ug_per_g))/d(nh4)
 
            drate_n2o_dnh4 = temp_real *this%k_nitr_n2o* f_t * f_w * f_ph * volume
- 
+
            Jacobian(ires_nh4,ires_nh4)=Jacobian(ires_nh4,ires_nh4) + &
              drate_n2o_dnh4 * &
              rt_auxvar%aqueous%dtotal(this%ispec_nh4,this%ispec_nh4,iphase)
@@ -453,7 +453,7 @@ subroutine NitrifReact(this,Residual,Jacobian,compute_derivative, &
            Jacobian(ires_n2o,ires_nh4)=Jacobian(ires_n2o,ires_nh4) - &
              0.5d0 * drate_n2o_dnh4 * &
              rt_auxvar%aqueous%dtotal(this%ispec_n2o,this%ispec_nh4,iphase)
-      
+
 #ifndef nojacobian_track_vars
            ! for tracking
            if(this%ispec_ngasnit > 0) then
@@ -513,7 +513,7 @@ end subroutine NitrifReact
 subroutine NitrifDestroy(this)
 
   implicit none
-  
+
   class(reaction_sandbox_nitrif_type) :: this
 
 end subroutine NitrifDestroy

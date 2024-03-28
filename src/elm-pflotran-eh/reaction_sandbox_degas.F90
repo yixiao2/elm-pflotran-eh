@@ -7,11 +7,11 @@ module Reaction_Sandbox_degas_class
   use Global_Aux_module
   use Reactive_Transport_Aux_module
   use PFLOTRAN_Constants_module
-  
+
   implicit none
-  
+
   private
-  
+
   type, public, &
     extends(reaction_sandbox_base_type) :: reaction_sandbox_degas_type
     PetscInt  :: ispec_co2a, ispec_n2oa, ispec_n2a
@@ -42,7 +42,7 @@ contains
 function degasCreate()
 
   implicit none
-  
+
   class(reaction_sandbox_degas_type), pointer :: degasCreate
 
 ! 4. Add code to allocate object and initialized all variables to zero and
@@ -61,8 +61,8 @@ function degasCreate()
   degasCreate%k_kinetic_h = 1.d-5
   degasCreate%fixph = 6.5d0
   degasCreate%b_fixph = PETSC_FALSE
-  nullify(degasCreate%next)  
-      
+  nullify(degasCreate%next)
+
 end function degasCreate
 
 ! ************************************************************************** !
@@ -76,17 +76,17 @@ subroutine degasRead(this,input,option)
   use String_module
   use Input_Aux_module
   use Units_module, only : UnitsConvertToInternal
-  
+
   implicit none
-  
+
   class(reaction_sandbox_degas_type) :: this
   type(input_type), pointer :: input
   type(option_type) :: option
 
   PetscInt :: i
   character(len=MAXWORDLENGTH) :: word
-  
-  do 
+
+  do
     call InputReadPflotranString(input,option)
     if (InputError(input)) exit
     if (InputCheckExit(input,option)) exit
@@ -94,7 +94,7 @@ subroutine degasRead(this,input,option)
     call InputReadWord(input,option,word,PETSC_TRUE)
     call InputErrorMsg(input,option,'keyword', &
                        'CHEMISTRY,REACTION_SANDBOX,DEGAS')
-    call StringToUpper(word)   
+    call StringToUpper(word)
 
     select case(trim(word))
       case('KINETIC_CONSTANT_CO2')
@@ -124,7 +124,7 @@ subroutine degasRead(this,input,option)
           call printErrMsg(option)
     end select
   enddo
-  
+
 end subroutine degasRead
 
 ! ************************************************************************** !
@@ -142,7 +142,7 @@ subroutine degasSetup(this,reaction,option)
   use Reaction_Immobile_Aux_module, only : GetImmobileSpeciesIDFromName
 
   implicit none
-  
+
   class(reaction_sandbox_degas_type) :: this
   class(reaction_rt_type) :: reaction
   type(option_type) :: option
@@ -172,7 +172,7 @@ subroutine degasSetup(this,reaction,option)
     this%ispec_co2g = GetImmobileSpeciesIDFromName( &
             word,reaction%immobile,PETSC_FALSE,option)
   endif
- 
+
   word = 'N2O(g)*'
   this%ispec_n2og = GetPrimarySpeciesIDFromName(word,reaction, &
                         PETSC_FALSE,option)
@@ -199,13 +199,13 @@ subroutine degasSetup(this,reaction,option)
      word = 'Himm'
      this%ispec_himm = GetImmobileSpeciesIDFromName( &
             word,reaction%immobile,PETSC_FALSE,option)
-   
+
      if(this%ispec_proton < 0) then
         option%io_buffer = 'CHEMISTRY,REACTION_SANDBOX,DEGAS,' // &
             'H+ is not defined even though pH needs to be fixed!'
         call printErrMsg(option)
      endif
- 
+
      if(this%ispec_himm < 0) then
         option%io_buffer = 'CHEMISTRY,REACTION_SANDBOX,DEGAS,' // &
             'Himm is not defined even though pH needs to be fixed!'
@@ -231,11 +231,11 @@ subroutine degasReact(this,Residual,Jacobian,compute_derivative, &
   use co2eos_module, only: duanco2, HENRY_co2_noderiv     ! co2eos.F90
 
 
-  
+
   implicit none
 
 
-  class(reaction_sandbox_degas_type) :: this  
+  class(reaction_sandbox_degas_type) :: this
   type(option_type) :: option
   class(reaction_rt_type) :: reaction
   type(reactive_transport_auxvar_type) :: rt_auxvar
@@ -272,14 +272,14 @@ subroutine degasReact(this,Residual,Jacobian,compute_derivative, &
   PetscReal :: temp_real, rate, drate
   PetscReal :: convert_molal_to_molar
   PetscReal :: xmass
- 
+
   PetscInt :: ires
 !-------------------------------------------------------------------------------------
 
   xmass = 1.d0
 
   if (associated(global_auxvar%xmass)) xmass = global_auxvar%xmass(iphase)
-  
+
   if (reaction%initialize_with_molality) then
     convert_molal_to_molar = global_auxvar%den_kg(iphase)*xmass/1000.d0
   else
@@ -492,8 +492,8 @@ subroutine degasReact(this,Residual,Jacobian,compute_derivative, &
       rate = this%k_kinetic_h * (c_h/c_h_fix - 1.0d0) * temp_real
     else
       rate = this%k_kinetic_h * (c_h - c_h_fix) * temp_real
-    endif  
-     
+    endif
+
     if(abs(rate) > 1.0d-20) then
        Residual(ires_proton) = Residual(ires_proton) + rate
        Residual(ires_himm) = Residual(ires_himm) - rate
@@ -510,7 +510,7 @@ subroutine degasReact(this,Residual,Jacobian,compute_derivative, &
 
     endif
 
-  endif 
+  endif
 
 #ifdef DEBUG
   do ires=1, reaction%ncomp
@@ -538,15 +538,15 @@ end subroutine degasReact
 
 ! ************************************************************************** !
 !
-! degasDestroy: Destroys allocatable or pointer objects created in this 
+! degasDestroy: Destroys allocatable or pointer objects created in this
 !                  module
 !
 ! ************************************************************************** !
 subroutine degasDestroy(this)
 
   implicit none
-  
-  class(reaction_sandbox_degas_type) :: this  
+
+  class(reaction_sandbox_degas_type) :: this
 
 end subroutine degasDestroy
 

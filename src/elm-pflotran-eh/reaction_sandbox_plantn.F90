@@ -8,11 +8,11 @@ module Reaction_Sandbox_PlantN_class
   use Reactive_Transport_Aux_module
   use PFLOTRAN_Constants_module
   use Utility_module, only : HFunctionSmooth
-  
+
   implicit none
-  
+
   private
-  
+
   type, public, &
     extends(reaction_sandbox_base_type) :: reaction_sandbox_plantn_type
     PetscInt  :: ispec_nh4
@@ -49,7 +49,7 @@ contains
 function PlantNCreate()
 
   implicit none
-  
+
   class(reaction_sandbox_plantn_type), pointer :: PlantNCreate
 
   allocate(PlantNCreate)
@@ -66,7 +66,7 @@ function PlantNCreate()
   PlantNCreate%x0eps_nh4  = 1.d-20
   PlantNCreate%x0eps_no3  = 1.d-20
   nullify(PlantNCreate%next)
-      
+
 end function PlantNCreate
 
 ! ************************************************************************** !
@@ -82,17 +82,17 @@ subroutine PlantNRead(this,input,option)
   use String_module
   use Input_Aux_module
   use Units_module, only : UnitsConvertToInternal
-  
+
   implicit none
-  
+
   class(reaction_sandbox_plantn_type) :: this
   type(input_type), pointer :: input
   type(option_type) :: option
 
   PetscInt :: i
   character(len=MAXWORDLENGTH) :: word
-  
-  do 
+
+  do
     call InputReadPflotranString(input,option)
     if (InputError(input)) exit
     if (InputCheckExit(input,option)) exit
@@ -100,7 +100,7 @@ subroutine PlantNRead(this,input,option)
     call InputReadWord(input,option,word,PETSC_TRUE)
     call InputErrorMsg(input,option,'keyword', &
                        'CHEMISTRY,REACTION_SANDBOX,PLANTN')
-    call StringToUpper(word)   
+    call StringToUpper(word)
 
     select case(trim(word))
       case('RATE_PLANTNDEMAND')
@@ -138,7 +138,7 @@ subroutine PlantNRead(this,input,option)
           call printErrMsg(option)
     end select
   enddo
-  
+
 end subroutine PlantNRead
 
 ! ************************************************************************** !
@@ -156,7 +156,7 @@ subroutine PlantNSetup(this,reaction,option)
   use Reaction_Immobile_Aux_module
 
   implicit none
-  
+
   class(reaction_sandbox_plantn_type) :: this
   class(reaction_rt_type) :: reaction
   type(option_type) :: option
@@ -243,7 +243,7 @@ subroutine PlantNReact(this,Residual,Jacobian,compute_derivative, &
   use petscvec
   use elmpf_interface_data
 #endif
-  
+
   implicit none
 
   class(reaction_sandbox_plantn_type) :: this
@@ -251,7 +251,7 @@ subroutine PlantNReact(this,Residual,Jacobian,compute_derivative, &
   class(reaction_rt_type) :: reaction
   type(reactive_transport_auxvar_type) :: rt_auxvar
   type(global_auxvar_type) :: global_auxvar
-  class(material_auxvar_type) :: material_auxvar
+  type(material_auxvar_type) :: material_auxvar
   PetscBool :: compute_derivative
 
   PetscReal :: Residual(reaction%ncomp)
@@ -300,7 +300,7 @@ subroutine PlantNReact(this,Residual,Jacobian,compute_derivative, &
 
 #ifdef ELM_PFLOTRAN
   PetscScalar, pointer :: rate_plantndemand_pf_loc(:)   !
-#endif 
+#endif
 
   !--------------------------------------------------------------------------------------------
   volume = material_auxvar%volume
@@ -665,7 +665,7 @@ end subroutine PlantNReact
 subroutine PlantNDestroy(this)
 
   implicit none
-  
+
   class(reaction_sandbox_plantn_type) :: this
 
 end subroutine PlantNDestroy

@@ -15,9 +15,9 @@ module Reaction_Sandbox_SomDec_class
 ! -----------------------------------------------------------------------------
 
   implicit none
-  
+
   private
-  
+
   type, public, &
     extends(reaction_sandbox_base_type) :: reaction_sandbox_somdec_type
 
@@ -89,7 +89,7 @@ module Reaction_Sandbox_SomDec_class
       procedure, public :: Evaluate => SomDecReact
       procedure, public :: Destroy => SomDecDestroy
   end type reaction_sandbox_somdec_type
-  
+
   type :: pool_type
     character(len=MAXWORDLENGTH) :: name
     PetscReal :: stoich
@@ -129,7 +129,7 @@ module Reaction_Sandbox_SomDec_class
     PetscReal :: inhibition_constant2
     type(inhibition_type), pointer :: next
   end type inhibition_type
-  
+
   type, public :: somdec_reaction_type
     character(len=MAXWORDLENGTH) :: upstream_pool_name
     type(pool_type), pointer :: downstream_pools
@@ -163,18 +163,18 @@ contains
 ! ************************************************************************** !
 
 function SomDecCreate()
-  ! 
+  !
   ! Allocates SomDec reaction object.
-  ! 
+  !
   ! Author: Guoping Tang
   ! Date: 02/04/14
-  ! 
+  !
   ! Re-done: Fengming Yuan @2019-06-20
 
   implicit none
-  
+
   type(reaction_sandbox_somdec_type), pointer :: SomDecCreate
-  
+
   allocate(SomDecCreate)
 
   nullify(SomDecCreate%all_abioticfactors)
@@ -346,9 +346,9 @@ end function InhibitionCreate
 ! ************************************************************************** !
 
 subroutine SomDecRead(this,input,option)
-  ! 
+  !
   ! Reads input deck for reaction sandbox parameters
-  ! 
+  !
   ! Author: Guoping Tang
   ! Date: 02/04/14
   ! Re-done: Fengming Yuan @2019-06-20
@@ -358,28 +358,28 @@ subroutine SomDecRead(this,input,option)
   use Input_Aux_module
   use Utility_module
   use Units_module, only : UnitsConvertToInternal
- 
+
   implicit none
-  
+
   class(reaction_sandbox_somdec_type) :: this
   type(input_type), pointer :: input
   type(option_type) :: option
-  
+
   character(len=MAXWORDLENGTH) :: word, word2, word3, internal_units
-  
+
   type(pool_type), pointer :: new_pool, prev_pool
   type(pool_type), pointer :: new_pool_dn, prev_pool_dn
   type(somdec_reaction_type), pointer :: new_rxn, prev_rxn
   type(monod_type), pointer :: new_monod, prev_monod
   type(inhibition_type), pointer :: new_inhibition, prev_inhibition
-  
+
   PetscReal :: rate_constant, turnover_time
   PetscReal :: rate_decomposition
   PetscReal :: rate_ad_factor
   PetscReal :: temp_real
 
   !---------------------------------------------------------------------------------------------------------------------------
-  
+
   nullify(new_pool)
   nullify(prev_pool)
 
@@ -394,10 +394,10 @@ subroutine SomDecRead(this,input,option)
 
   nullify(new_inhibition)
   nullify(prev_inhibition)
-  
+
   this%all_abioticfactors => AbioticFactorsCreate()
 
-  do 
+  do
     call InputReadPflotranString(input,option)
     if (InputError(input)) exit
     if (InputCheckExit(input,option)) exit
@@ -405,7 +405,7 @@ subroutine SomDecRead(this,input,option)
     call InputReadWord(input,option,word,PETSC_TRUE)
     call InputErrorMsg(input,option,'keyword', &
                        'CHEMISTRY,REACTION_SANDBOX,SomDec')
-    call StringToUpper(word)   
+    call StringToUpper(word)
     select case(trim(word))
 
       case('O2_SPECIES_NAME')  ! this is for all reactions (maybe overriden by individual reaction)
@@ -469,7 +469,7 @@ subroutine SomDecRead(this,input,option)
         do
           call InputReadPflotranString(input,option)
           if (InputError(input)) exit
-          if (InputCheckExit(input,option)) exit   
+          if (InputCheckExit(input,option)) exit
 
           allocate(new_pool)
           new_pool%name = ''
@@ -498,7 +498,7 @@ subroutine SomDecRead(this,input,option)
         enddo
 
       case('REACTION')
-      
+
         allocate(new_rxn)
         new_rxn%upstream_pool_name = ''
         new_rxn%rate_constant = UNINITIALIZED_DOUBLE
@@ -517,14 +517,14 @@ subroutine SomDecRead(this,input,option)
         new_rxn%COx_specitype = UNINITIALIZED_INTEGER
 
         nullify(new_rxn%next)
-        
+
         ! need to set these temporarily in order to check if they are not all set.
         turnover_time = -1.d0
         rate_constant = -1.d0
         rate_decomposition = -1.d0
         rate_ad_factor = 1.d0
-        
-        do 
+
+        do
           call InputReadPflotranString(input,option)
           if (InputError(input)) exit
           if (InputCheckExit(input,option)) exit
@@ -532,7 +532,7 @@ subroutine SomDecRead(this,input,option)
           call InputReadWord(input,option,word,PETSC_TRUE)
           call InputErrorMsg(input,option,'keyword', &
                              'CHEMISTRY,REACTION_SANDBOX,SomDec,REACTION')
-          call StringToUpper(word)   
+          call StringToUpper(word)
 
           select case(trim(word))
             case('UPSTREAM_POOL')
@@ -571,7 +571,7 @@ subroutine SomDecRead(this,input,option)
               if (InputError(input)) then
                 input%err_buf = 'SomDec RATE CONSTANT UNITS'
                 call InputDefaultMsg(input,option)
-              else              
+              else
                 rate_constant = rate_constant * &
                   UnitsConvertToInternal(word,internal_units,option)
               endif
@@ -584,7 +584,7 @@ subroutine SomDecRead(this,input,option)
               if (InputError(input)) then
                 input%err_buf = 'SomDec TURNOVER TIME UNITS'
                 call InputDefaultMsg(input,option)
-              else              
+              else
                 turnover_time = turnover_time * &
                   UnitsConvertToInternal(word,internal_units,option)
               endif
@@ -774,7 +774,7 @@ subroutine SomDecRead(this,input,option)
             call AbioticFactorsCopy(new_rxn%abiotic_factors, this%all_abioticfactors)
           endif
         endif
-        
+
         ! check to ensure that one of turnover time or rate constant is set.
         if ( (turnover_time > 0.d0 .and. rate_constant > 0.d0) .or. &
              (turnover_time > 0.d0 .and. rate_decomposition > 0.d0) .or. &
@@ -818,7 +818,7 @@ subroutine SomDecRead(this,input,option)
         call printErrMsg(option)
     end select
   enddo ! 'SOMDECOMP' Do loop
-  
+
 end subroutine SomDecRead
 
 ! ************************************************************************** !
@@ -977,12 +977,12 @@ end subroutine SomDecRead_AbioticFactors
 ! ************************************************************************** !
 
 subroutine SomDecSetup(this,reaction,option)
-  ! 
+  !
   ! Sets up SomDec reaction after it has been read from input
-  ! 
+  !
   ! Author: Guoping Tang
   ! Date: 02/04/14
-  ! 
+  !
   ! Re-done: Fengming Yuan @2019-06-20
 
   use Reaction_Aux_module
@@ -992,16 +992,16 @@ subroutine SomDecSetup(this,reaction,option)
   use Reaction_Gas_Aux_module, only : GasGetIDFromName
 
   use Utility_module, only : DeallocateArray
-  
+
   implicit none
 
   class(reaction_sandbox_somdec_type) :: this
   type(option_type) :: option
   class(reaction_rt_type) :: reaction
-  
+
   character(len=MAXWORDLENGTH), allocatable :: pool_names(:)
   character(len=MAXWORDLENGTH) :: word
-  
+
   PetscInt, pointer :: species_id_pool_c(:)
   PetscInt, pointer :: species_id_pool_n(:)
   PetscInt, pointer :: species_id_pool_hr(:)
@@ -1022,7 +1022,7 @@ subroutine SomDecSetup(this,reaction,option)
   PetscInt :: ires
 
   !---------------------------------------------------------------------------------------------------------------------------
-  
+
   ! count # pools
   icount = 0
   cur_pool => this%pools
@@ -1032,7 +1032,7 @@ subroutine SomDecSetup(this,reaction,option)
     cur_pool => cur_pool%next
   enddo
   this%npool = icount
-  
+
   ! count # rxn
   icount = 0
   cur_rxn => this%rxn
@@ -1042,9 +1042,9 @@ subroutine SomDecSetup(this,reaction,option)
     cur_rxn => cur_rxn%next
   enddo
   this%nrxn = icount
- 
+
   allocate(this%n_downstream_pools(this%nrxn))
- 
+
   ! count # downstream pools in each reaction
   max_downstream_pools = -1
   icount = 0
@@ -1066,7 +1066,7 @@ subroutine SomDecSetup(this,reaction,option)
 
     if(max_downstream_pools < jcount) then
       max_downstream_pools = jcount
-    endif 
+    endif
 
     cur_rxn => cur_rxn%next
   enddo
@@ -1086,7 +1086,7 @@ subroutine SomDecSetup(this,reaction,option)
   allocate(this%upstream_nimm_id(this%nrxn))
   allocate(this%upstream_nc(this%nrxn))
   allocate(this%upstream_is_aqueous(this%nrxn))
-  
+
   allocate(this%downstream_c_id(this%nrxn,max_downstream_pools))
   allocate(this%downstream_n_id(this%nrxn,max_downstream_pools))
   allocate(this%downstream_stoich(this%nrxn,max_downstream_pools))
@@ -1117,7 +1117,7 @@ subroutine SomDecSetup(this,reaction,option)
   this%downstream_is_varycn = PETSC_FALSE
   this%mineral_c_stoich = 0.d0
   this%mineral_n_stoich = 0.d0
-  
+
 ! temporary array for mapping pools in rxn
   allocate(pool_names(this%npool))
   allocate(pool_is_aqueous(this%npool))
@@ -1199,7 +1199,7 @@ subroutine SomDecSetup(this,reaction,option)
              pool_is_aqueous(icount) = PETSC_TRUE
           endif
       endif
-      
+
     endif
 
     word = trim(cur_pool%name) // 'CHR'
@@ -1221,7 +1221,7 @@ subroutine SomDecSetup(this,reaction,option)
 
     cur_pool => cur_pool%next
   enddo
- 
+
 ! reactions
   icount = 0
   cur_rxn => this%rxn
@@ -1239,8 +1239,8 @@ subroutine SomDecSetup(this,reaction,option)
     else
       this%upstream_c_id(icount) = species_id_pool_c(ipool)
       this%upstream_n_id(icount) = species_id_pool_n(ipool)
-      this%upstream_nc(icount) = this%pool_nc_ratio(ipool) 
-      this%upstream_is_aqueous(icount) = pool_is_aqueous(ipool) 
+      this%upstream_nc(icount) = this%pool_nc_ratio(ipool)
+      this%upstream_is_aqueous(icount) = pool_is_aqueous(ipool)
       if(this%upstream_n_id(icount) > 0) then
          this%upstream_is_varycn(icount) = PETSC_TRUE
       else
@@ -1277,9 +1277,9 @@ subroutine SomDecSetup(this,reaction,option)
         else
           this%downstream_c_id(icount, jcount) = species_id_pool_c(ipool)
           this%downstream_n_id(icount, jcount) = species_id_pool_n(ipool)
-          this%downstream_stoich(icount, jcount) = cur_pool%stoich 
-          this%downstream_nc(icount, jcount) = this%pool_nc_ratio(ipool) 
-          this%downstream_is_aqueous(icount, jcount) = pool_is_aqueous(ipool) 
+          this%downstream_stoich(icount, jcount) = cur_pool%stoich
+          this%downstream_nc(icount, jcount) = this%pool_nc_ratio(ipool)
+          this%downstream_is_aqueous(icount, jcount) = pool_is_aqueous(ipool)
 
           if (this%downstream_n_id(icount,jcount) > 0) then
             this%downstream_is_varycn(icount,jcount) = PETSC_TRUE
@@ -1336,8 +1336,8 @@ subroutine SomDecSetup(this,reaction,option)
 
     !
     cur_rxn => cur_rxn%next
-  enddo 
-  
+  enddo
+
   deallocate(pool_names)
   call DeallocateArray(pool_is_aqueous)
   call DeallocateArray(species_id_pool_c)
@@ -1454,7 +1454,7 @@ subroutine SomDecSetup(this,reaction,option)
   word = 'NO3-'
   this%species_id_no3 = GetPrimarySpeciesIDFromName(word,reaction, &
                         PETSC_FALSE,option)
-  
+
   word = 'N2O(aq)'
   this%species_id_n2o = GetPrimarySpeciesIDFromName(word,reaction, &
                         PETSC_FALSE,option)
@@ -1471,7 +1471,7 @@ subroutine SomDecSetup(this,reaction,option)
   word = 'Nmin'
   this%species_id_nmin = GetImmobileSpeciesIDFromName( &
             word,reaction%immobile,PETSC_FALSE,option)
- 
+
   word = 'Nimp'
   this%species_id_nimp = GetImmobileSpeciesIDFromName( &
             word,reaction%immobile,PETSC_FALSE,option)
@@ -1479,7 +1479,7 @@ subroutine SomDecSetup(this,reaction,option)
   word = 'Nimm'
   this%species_id_nimm = GetImmobileSpeciesIDFromName( &
             word,reaction%immobile,PETSC_FALSE,option)
- 
+
   word = 'NGASmin'
   this%species_id_ngasmin = GetImmobileSpeciesIDFromName( &
             word,reaction%immobile,PETSC_FALSE,option)
@@ -1495,15 +1495,15 @@ end subroutine SomDecSetup
 ! ************************************************************************** !
 subroutine SomDecReact(this,Residual,Jacobian,compute_derivative,rt_auxvar, &
                        global_auxvar,material_auxvar,reaction,option)
-  ! 
+  !
   ! Evaluates reaction storing residual and/or Jacobian
-  ! 
+  !
   ! Author: Guoping Tang
   ! Date: 02/04/14
   !
   ! Rewritten by Fengming Yuan @Aug-14-2014. The orginal was totally messed up,
   ! which caused a lot of issues.
-  ! 
+  !
 ! ----------------------------------------------------------------------------!
   use Option_module
   use Reaction_Aux_module
@@ -1521,7 +1521,7 @@ subroutine SomDecReact(this,Residual,Jacobian,compute_derivative,rt_auxvar, &
   class(reaction_rt_type) :: reaction
   type(reactive_transport_auxvar_type) :: rt_auxvar
   type(global_auxvar_type) :: global_auxvar
-  class(material_auxvar_type) :: material_auxvar
+  type(material_auxvar_type) :: material_auxvar
 
   PetscBool :: compute_derivative
   PetscReal :: Residual(reaction%ncomp)
@@ -1577,7 +1577,7 @@ subroutine SomDecReact(this,Residual,Jacobian,compute_derivative,rt_auxvar, &
   saturation = global_auxvar%sat(iphase)
 
   theta = saturation * porosity
-  psi = min(global_auxvar%pres(iphase) - option%reference_pressure, -1.d-20)     ! if positive, saturated soil's psi is nearly zero
+  psi = min(global_auxvar%pres(iphase) - option%flow%reference_pressure, -1.d-20)     ! if positive, saturated soil's psi is nearly zero
 
   tc = global_auxvar%temp
 
@@ -1736,7 +1736,7 @@ subroutine SomDecReact(this,Residual,Jacobian,compute_derivative,rt_auxvar, &
     if(f_t < 1.0d-20 .or. f_w < 1.0d-20 .or. f_depth < 1.0d-20) then
       cycle
     endif
-  
+
     !-----------------------------------------------------------------------------------------------------
     ! (i) calculate C rate ( and, N rate is derived by Crate*N/C)
 
@@ -2433,7 +2433,7 @@ subroutine SomDecReact2(this,Residual,Jacobian,compute_derivative, reaction, &
   class(reaction_rt_type) :: reaction
   type(reactive_transport_auxvar_type) :: rt_auxvar
   type(global_auxvar_type) :: global_auxvar
-  class(material_auxvar_type) :: material_auxvar
+  type(material_auxvar_type) :: material_auxvar
   !
   PetscBool :: compute_derivative
   PetscReal :: Residual(reaction%ncomp)
@@ -3484,7 +3484,7 @@ subroutine SomDecNemission(this,Residual,Jacobian,compute_derivative,rt_auxvar, 
   class(reaction_rt_type) :: reaction
   type(reactive_transport_auxvar_type) :: rt_auxvar
   type(global_auxvar_type) :: global_auxvar
-  class(material_auxvar_type) :: material_auxvar
+  type(material_auxvar_type) :: material_auxvar
 
   PetscBool :: compute_derivative
   PetscReal :: Residual(reaction%ncomp)
@@ -3546,7 +3546,7 @@ subroutine SomDecNemission(this,Residual,Jacobian,compute_derivative,rt_auxvar, 
     ! temperature/moisture/pH response functions (Parton et al. 1996)
     f_t = -0.06d0 + 0.13d0 * exp( 0.07d0 * tc )
     f_w = ((1.27d0 - saturation)/0.67d0)**(3.1777d0) * &
-        ((saturation - 0.0012d0)/0.5988d0)**2.84d0  
+        ((saturation - 0.0012d0)/0.5988d0)**2.84d0
 
     ph = 6.5d0       ! default
     if (this%species_id_proton > 0) then
@@ -3603,7 +3603,7 @@ subroutine SomDecNemission(this,Residual,Jacobian,compute_derivative,rt_auxvar, 
       !--------------------------------------------------------------
       ! residuals
       rate_n2o = temp_real*this%n2o_frac_mineralization*net_nmin_rate * feps0
- 
+
       Residual(ires_nh4) = Residual(ires_nh4) + rate_n2o
 
       Residual(ires_n2o) = Residual(ires_n2o) - 0.5d0 * rate_n2o
@@ -3645,20 +3645,20 @@ end subroutine SomDecNemission
 ! Re-done: Fengming Yuan @2019-06-20
 ! ************************************************************************** !
 subroutine SomDecDestroy(this)
-  ! 
+  !
   ! Destroys allocatable or pointer objects created in this
   ! module
-  ! 
+  !
   ! Author: Glenn Hammond
   ! Date: 02/04/13
-  ! 
+  !
 
   use Utility_module, only : DeallocateArray
 
   implicit none
-  
+
   class(reaction_sandbox_somdec_type) :: this
-  
+
   type(pool_type), pointer :: cur_pool, prev_pool
   type(somdec_reaction_type), pointer :: cur_rxn, prev_rxn
   type(monod_type), pointer :: cur_monod, prev_monod
@@ -3666,7 +3666,7 @@ subroutine SomDecDestroy(this)
 
   deallocate(this%all_abioticfactors)
   nullify(this%all_abioticfactors)
-  
+
   cur_pool => this%pools
   do
     if (.not.associated(cur_pool)) exit
@@ -3675,7 +3675,7 @@ subroutine SomDecDestroy(this)
     deallocate(prev_pool)
     nullify(prev_pool)
   enddo
-  
+
   cur_rxn => this%rxn
   do
     if (.not.associated(cur_rxn)) exit
@@ -3716,7 +3716,7 @@ subroutine SomDecDestroy(this)
     deallocate(prev_rxn)
     nullify(prev_rxn)
   enddo
-  
+
   call DeallocateArray(this%pool_nc_ratio)
   call DeallocateArray(this%rate_constant)
   call DeallocateArray(this%rate_decomposition)
@@ -3734,9 +3734,9 @@ subroutine SomDecDestroy(this)
   call DeallocateArray(this%downstream_stoich)
   call DeallocateArray(this%downstream_is_aqueous)
   call DeallocateArray(this%downstream_is_varycn)
-  call DeallocateArray(this%mineral_c_stoich) 
-  call DeallocateArray(this%mineral_n_stoich) 
- 
+  call DeallocateArray(this%mineral_c_stoich)
+  call DeallocateArray(this%mineral_n_stoich)
+
 end subroutine SomDecDestroy
 
 ! ************************************************************************** !

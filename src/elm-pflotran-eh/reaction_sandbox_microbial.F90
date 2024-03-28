@@ -1,9 +1,9 @@
 module Reaction_Sandbox_Microbial_class
-  ! this sandbox implements a microbial reaction with an electron donor, 
-  ! an electron acceptor, a microbial mass, and a number of inhibitors in the 
-  ! aqueous phase. Every reactant / product is assumed in the aqueous phase 
-  ! except microbial mass, which is assumed to be immobile phase. 
-  ! if a microbial mass is specified, the rate is of the first order with 
+  ! this sandbox implements a microbial reaction with an electron donor,
+  ! an electron acceptor, a microbial mass, and a number of inhibitors in the
+  ! aqueous phase. Every reactant / product is assumed in the aqueous phase
+  ! except microbial mass, which is assumed to be immobile phase.
+  ! if a microbial mass is specified, the rate is of the first order with
   ! respect to microbial mass
   ! if an electron donor or acceptor is specified, the rate is of Monod (C/(C+S))
   ! if an inhibitor is specified, the rate is inhibited by I/(C+I)
@@ -23,9 +23,9 @@ module Reaction_Sandbox_Microbial_class
 #endif
 
   implicit none
-  
+
   private
-  
+
   type, public :: rate_type
     character(len=MAXWORDLENGTH) :: name
     PetscReal                    :: value
@@ -89,7 +89,7 @@ contains
 function MicrobialCreate()
 
   implicit none
-  
+
   class(reaction_sandbox_microbial_type), pointer :: MicrobialCreate
 
   allocate(MicrobialCreate)
@@ -127,14 +127,14 @@ function MicrobialCreate()
   nullify(MicrobialCreate%Inhibition)
   nullify(MicrobialCreate%ispec_inh)
   nullify(MicrobialCreate%inhibition_coef)
-  nullify(MicrobialCreate%next)  
+  nullify(MicrobialCreate%next)
 
 end function MicrobialCreate
 
 function RateCreate()
   implicit none
   type(rate_type), pointer :: RateCreate
-  allocate(RateCreate)  
+  allocate(RateCreate)
   RateCreate%name = ''
   RateCreate%value = -1.0d0
   nullify(RateCreate%next)
@@ -162,9 +162,9 @@ subroutine MicrobialRead(this,input,option)
   use String_module
   use Input_Aux_module
   use Units_module, only : UnitsConvertToInternal
-  
+
   implicit none
-  
+
   class(reaction_sandbox_microbial_type) :: this
   type(input_type), pointer              :: input
   type(option_type)                      :: option
@@ -179,7 +179,7 @@ subroutine MicrobialRead(this,input,option)
   turnover_time = 0.d0
   rate_constant = 0.d0
 
-  do 
+  do
     call InputReadPflotranString(input,option)
     if (InputError(input)) exit
     if (InputCheckExit(input,option)) exit
@@ -187,7 +187,7 @@ subroutine MicrobialRead(this,input,option)
     call InputReadWord(input,option,word,PETSC_TRUE)
     call InputErrorMsg(input,option,'keyword', &
                        'CHEMISTRY,REACTION_SANDBOX,Microbial')
-    call StringToUpper(word)   
+    call StringToUpper(word)
 
     select case(trim(word))
 #ifdef ELM_PFLOTRAN
@@ -201,7 +201,7 @@ subroutine MicrobialRead(this,input,option)
           call InputErrorMsg(input,option,'keyword', &
             'CHEMISTRY,REACTION_SANDBOX,Microbial,' // &
             'TEMPERATURE RESPONSE FUNCTION.')
-          call StringToUpper(word)   
+          call StringToUpper(word)
 
           select case(trim(word))
             case('CLMCN')
@@ -209,16 +209,16 @@ subroutine MicrobialRead(this,input,option)
                 TEMPERATURE_RESPONSE_FUNCTION_CLMCN
             case('Q10')
               this%temperature_response_function = &
-                TEMPERATURE_RESPONSE_FUNCTION_Q10    
-              call InputReadDouble(input,option,tmp_real)  
+                TEMPERATURE_RESPONSE_FUNCTION_Q10
+              call InputReadDouble(input,option,tmp_real)
               call InputErrorMsg(input,option,'Q10', &
                 'CHEMISTRY,REACTION_SANDBOX_Microbial,' // &
                 'TEMPERATURE RESPONSE FUNCTION.')
                   this%Q10 = tmp_real
             case('DLEM')
               this%temperature_response_function = &
-                TEMPERATURE_RESPONSE_FUNCTION_DLEM    
-              call InputReadDouble(input,option,tmp_real)  
+                TEMPERATURE_RESPONSE_FUNCTION_DLEM
+              call InputReadDouble(input,option,tmp_real)
               call InputErrorMsg(input,option,'DLEM', &
                 'CHEMISTRY,REACTION_SANDBOX_Microbial,' // &
                 'TEMPERATURE RESPONSE FUNCTION')
@@ -229,7 +229,7 @@ subroutine MicrobialRead(this,input,option)
                 trim(word) // ' not recognized - Valid keyword: "CLMCN","Q10" or "DLEM" '
               call printErrMsg(option)
           end select
-        enddo 
+        enddo
 
       case('MOISTURE_RESPONSE_FUNCTION')
         do
@@ -240,20 +240,20 @@ subroutine MicrobialRead(this,input,option)
           call InputReadWord(input,option,word,PETSC_TRUE)
           call InputErrorMsg(input,option,'keyword', &
             'CHEMISTRY,REACTION_SANDBOX,Microbial,MOISTURE RESPONSE FUNCTION')
-          call StringToUpper(word)   
+          call StringToUpper(word)
 
           select case(trim(word))
             case('CLMCN')
               this%moisture_response_function = MOISTURE_RESPONSE_FUNCTION_CLMCN
             case('DLEM')
-              this%moisture_response_function = MOISTURE_RESPONSE_FUNCTION_DLEM    
+              this%moisture_response_function = MOISTURE_RESPONSE_FUNCTION_DLEM
             case default
               option%io_buffer = 'CHEMISTRY,REACTION_SANDBOX,Microbial,' // &
                 'TEMPERATURE RESPONSE FUNCTION keyword: ' // &
                 trim(word) // ' not recognized  - Valid keyword: "CLMCN","DLEM"'
               call printErrMsg(option)
           end select
-        enddo 
+        enddo
 
       case('PH_RESPONSE_FUNCTION')
         do
@@ -264,20 +264,20 @@ subroutine MicrobialRead(this,input,option)
           call InputReadWord(input,option,word,PETSC_TRUE)
           call InputErrorMsg(input,option,'keyword', &
             'CHEMISTRY,REACTION_SANDBOX,Microbial,PH RESPONSE FUNCTION')
-          call StringToUpper(word)   
+          call StringToUpper(word)
 
           select case(trim(word))
             case('CENTURY')
-              this%ph_response_function = PH_RESPONSE_FUNCTION_CENTURY    
+              this%ph_response_function = PH_RESPONSE_FUNCTION_CENTURY
             case('DLEM')
-              this%ph_response_function = PH_RESPONSE_FUNCTION_DLEM    
+              this%ph_response_function = PH_RESPONSE_FUNCTION_DLEM
             case default
               option%io_buffer = 'CHEMISTRY,REACTION_SANDBOX,Microbial,' // &
                 'PH RESPONSE FUNCTION keyword: ' // &
                 trim(word) // ' not recognized - Valid keyword: "CENTURY","DLEM".'
             call printErrMsg(option)
           end select
-        enddo 
+        enddo
 
       case('FIXED_PH')
         call InputReadDouble(input,option,this%fixed_ph)
@@ -302,7 +302,7 @@ subroutine MicrobialRead(this,input,option)
         call InputReadWord(input,option,this%name_e_donor,PETSC_TRUE)
         call InputErrorMsg(input,option,'Electron donor species name', &
           'CHEMISTRY,REACTION_SANDBOX_Microbial,ELECTRON_DONOR')
-        call InputReadDouble(input,option,this%half_saturation_e_donor)  
+        call InputReadDouble(input,option,this%half_saturation_e_donor)
         call InputErrorMsg(input,option,'Electron donor half saturation coef', &
           'CHEMISTRY,REACTION_SANDBOX_Microbial,ELECTRON_DONOR')
 
@@ -310,10 +310,10 @@ subroutine MicrobialRead(this,input,option)
         call InputReadWord(input,option,this%name_e_acceptor,PETSC_TRUE)
         call InputErrorMsg(input,option,'Electron acceptor species name', &
           'CHEMISTRY,REACTION_SANDBOX_Microbial,ELECTRON_ACCEPTOR')
-        call InputReadDouble(input,option,this%half_saturation_e_acceptor)  
+        call InputReadDouble(input,option,this%half_saturation_e_acceptor)
         call InputErrorMsg(input,option,'Electron acceptor half satur. coef', &
           'CHEMISTRY,REACTION_SANDBOX_Microbial,ELECTRON_ACCEPTOR')
-      
+
       case('MICROBIAL_MASS')
         call InputReadWord(input,option,this%name_microbial_mass,PETSC_TRUE)
         call InputErrorMsg(input,option,'Microbial mass species name', &
@@ -330,7 +330,7 @@ subroutine MicrobialRead(this,input,option)
         call InputReadWord(input,option,word,PETSC_TRUE)
         call InputErrorMsg(input,option,'species name', &
           'CHEMISTRY,REACTION_SANDBOX_Microbial,INHIBITION')
-        call InputReadDouble(input,option,tmp_real)  
+        call InputReadDouble(input,option,tmp_real)
         call InputErrorMsg(input,option,'inhibition constant', &
           'CHEMISTRY,REACTION_SANDBOX_Microbial,INHIBITION')
         inhibition => RateCreate()
@@ -357,7 +357,7 @@ end subroutine MicrobialRead
 
 ! ************************************************************************** !
 !
-! MicrobialSetup: 
+! MicrobialSetup:
 ! author: Guoping Tang
 ! date: 11/25/13
 !
@@ -401,14 +401,14 @@ subroutine MicrobialSetup(this,reaction,option)
 
   if (trim(this%name_microbial_mass) /= '') then
     this%ispec_microbial_mass = GetImmobileSpeciesIDFromName( &
-      this%name_microbial_mass,reaction%immobile,PETSC_FALSE,option) 
+      this%name_microbial_mass,reaction%immobile,PETSC_FALSE,option)
   endif
 
   ! inhibition rate terms
   if (this%nInhibition >= 1) then
     allocate(this%ispec_inh(this%nInhibition))
     allocate(this%inhibition_coef(this%nInhibition))
- 
+
     cur_rate => this%Inhibition
     icount = 1
     do
@@ -426,8 +426,8 @@ subroutine MicrobialSetup(this,reaction,option)
       this%inhibition_coef(icount) = cur_rate%value
       cur_rate => cur_rate%next
       icount = icount + 1
-    enddo 
-  endif   
+    enddo
+  endif
 
 end subroutine MicrobialSetup
 
@@ -446,15 +446,15 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
   use Reaction_Aux_module, only : reaction_rt_type, GetPrimarySpeciesIDFromName
   use Material_Aux_module, only : material_auxvar_type
   use Utility_module, only : DeallocateArray
-  
+
 #ifdef ELM_PFLOTRAN
   use petscvec
   use elmpf_interface_data
 #endif
-  
+
   implicit none
 
-  class(reaction_sandbox_microbial_type) :: this  
+  class(reaction_sandbox_microbial_type) :: this
   type(option_type) :: option
   class(reaction_rt_type) :: reaction
   PetscBool :: compute_derivative
@@ -464,12 +464,12 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
   PetscReal :: volume
   type(reactive_transport_auxvar_type) :: rt_auxvar
   type(global_auxvar_type) :: global_auxvar
-  class(material_auxvar_type) :: material_auxvar
+  type(material_auxvar_type) :: material_auxvar
 
   PetscInt, parameter :: iphase = 1
   PetscReal :: Lwater
   PetscReal :: rate, drate, drate_ddonor, drate_dacceptor, drate_dbiomass
-  PetscReal :: tmp_real, conc, activity 
+  PetscReal :: tmp_real, conc, activity
 
   PetscReal :: f_t
   PetscReal :: f_w
@@ -490,18 +490,18 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
   porosity = material_auxvar%porosity
   volume = material_auxvar%volume
 
-! temperature response function 
-#ifdef ELM_PFLOTRAN 
+! temperature response function
+#ifdef ELM_PFLOTRAN
   tc = global_auxvar%temp
-  f_t = GetTemperatureResponse(tc, this%temperature_response_function, this%Q10) 
+  f_t = GetTemperatureResponse(tc, this%temperature_response_function, this%Q10)
 #else
   f_t = 1.0d0
 #endif
 
-  ! moisture response function 
+  ! moisture response function
 #ifdef ELM_PFLOTRAN
   local_id = option%iflag ! temporary measure suggested by Glenn
-  theta = global_auxvar%sat(1) * porosity 
+  theta = global_auxvar%sat(1) * porosity
   f_w = GetMoistureResponse(theta, local_id, this%moisture_response_function)
 #else
   f_w = 1.0d0
@@ -521,12 +521,12 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
                  rt_auxvar%sec_act_coef(abs(reaction%species_idx%h_ion_id)))
       endif
     endif
-    f_ph = GetpHResponse(ph, this%ph_response_function)  
-  endif 
+    f_ph = GetpHResponse(ph, this%ph_response_function)
+  endif
 #else
   f_ph = 1.0d0
-#endif 
-  
+#endif
+
   if (f_t < 1.0d-20 .or. f_w < 1.0d-20 .or. f_ph < 1.0d-20) then
      return
   endif
@@ -536,7 +536,7 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
 
   rate = this%rate_constant * Lwater * f_t * f_w * f_ph
 
-  if (compute_derivative) then 
+  if (compute_derivative) then
     drate_ddonor    = rate
     drate_dacceptor = rate
     drate_dbiomass  = rate
@@ -544,7 +544,7 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
     if (this%nInhibition >= 1) then
       allocate(drate_dinh(this%nInhibition))
     endif
- 
+
     do i = 1, this%nInhibition
       drate_dinh(i) = rate
     enddo
@@ -554,8 +554,8 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
   icomp = this%ispec_microbial_mass
   if (icomp > 0) then
     conc = rt_auxvar%immobile(icomp)
-    rate = rate * conc 
-    if (compute_derivative) then 
+    rate = rate * conc
+    if (compute_derivative) then
       drate_ddonor = drate_ddonor * conc
       drate_dacceptor = drate_dacceptor * conc
       do i = 1, this%nInhibition
@@ -569,9 +569,9 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
   if (icomp > 0) then
     activity = (rt_auxvar%pri_molal(icomp) - this%residual_e_donor) &
              * rt_auxvar%pri_act_coef(icomp)
-    tmp_real = activity / (activity + this%half_saturation_e_donor) 
+    tmp_real = activity / (activity + this%half_saturation_e_donor)
     rate = rate * tmp_real
-    if (compute_derivative) then 
+    if (compute_derivative) then
       drate_dbiomass = drate_dbiomass * tmp_real
       drate_ddonor = drate_ddonor * this%half_saturation_e_donor / &
                      (activity + this%half_saturation_e_donor) / &
@@ -589,9 +589,9 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
   if (icomp > 0) then
     activity = (rt_auxvar%pri_molal(icomp) - this%residual_e_acceptor) &
              * rt_auxvar%pri_act_coef(icomp)
-    tmp_real = activity /(activity + this%half_saturation_e_acceptor) 
+    tmp_real = activity /(activity + this%half_saturation_e_acceptor)
     rate = rate * tmp_real
-    if (compute_derivative) then 
+    if (compute_derivative) then
       drate_dbiomass = drate_dbiomass * tmp_real
       drate_ddonor = drate_ddonor * tmp_real
       drate_dacceptor = drate_dacceptor * this%half_saturation_e_acceptor / &
@@ -601,17 +601,17 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
       do i = 1, this%nInhibition
         drate_dinh(i) = drate_dinh(i) * tmp_real
       enddo
-    endif 
+    endif
   endif
 
   ! inhibition term
   do i = 1, this%nInhibition
     icomp = this%ispec_inh(i)
     if (icomp <= 0) cycle
-    activity = rt_auxvar%pri_molal(icomp)*rt_auxvar%pri_act_coef(icomp) 
-    tmp_real = this%inhibition_coef(i)/(activity + this%inhibition_coef(i))  
-    rate = rate * tmp_real  
-    if (compute_derivative) then 
+    activity = rt_auxvar%pri_molal(icomp)*rt_auxvar%pri_act_coef(icomp)
+    tmp_real = this%inhibition_coef(i)/(activity + this%inhibition_coef(i))
+    rate = rate * tmp_real
+    if (compute_derivative) then
       drate_dbiomass = drate_dbiomass * tmp_real
       drate_ddonor = drate_ddonor * tmp_real
       drate_dacceptor = drate_dacceptor * tmp_real
@@ -621,25 +621,25 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
                         / (activity + this%inhibition_coef(j)) &
                         / (activity + this%inhibition_coef(j)) &
                         * rt_auxvar%pri_act_coef(icomp)
-        else 
+        else
           drate_dinh(j) = drate_dinh(j) * tmp_real
         endif
       enddo
     endif
   enddo
- 
-  ! Residual 
+
+  ! Residual
   do i = 1, this%dbase_rxn%nspec
     if (this%dbase_rxn%spec_ids(i) == this%ispec_microbial_mass) then
       ires = this%dbase_rxn%spec_ids(i) + reaction%offset_immobile
     else
       ires = this%dbase_rxn%spec_ids(i)
     endif
-    Residual(ires) = Residual(ires) - this%dbase_rxn%stoich(i) * rate 
+    Residual(ires) = Residual(ires) - this%dbase_rxn%stoich(i) * rate
   enddo
 
   ! Jacobian
-  if (.not.compute_derivative) return 
+  if (.not.compute_derivative) return
 
   ! with respect to biomass
   icomp = this%ispec_microbial_mass
@@ -652,11 +652,11 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
       endif
       Jacobian(ires, icomp + reaction%offset_immobile) = &
         Jacobian(ires, icomp + reaction%offset_immobile) &
-        - this%dbase_rxn%stoich(i) * drate_dbiomass 
+        - this%dbase_rxn%stoich(i) * drate_dbiomass
     enddo
   endif
 
-  ! with respect to electron donor     
+  ! with respect to electron donor
   icomp = this%ispec_e_donor
   if (icomp > 0) then
     do i = 1, this%dbase_rxn%nspec
@@ -666,7 +666,7 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
         ires = this%dbase_rxn%spec_ids(i)
       endif
       Jacobian(ires, icomp) = Jacobian(ires,icomp) &
-                            - this%dbase_rxn%stoich(i) * drate_ddonor 
+                            - this%dbase_rxn%stoich(i) * drate_ddonor
      enddo
   endif
 
@@ -680,7 +680,7 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
         ires = this%dbase_rxn%spec_ids(i)
       endif
       Jacobian(ires, icomp) = Jacobian(ires,icomp) &
-                            - this%dbase_rxn%stoich(i) * drate_dacceptor 
+                            - this%dbase_rxn%stoich(i) * drate_dacceptor
     enddo
   endif
 
@@ -695,7 +695,7 @@ subroutine MicrobialReact(this,Residual,Jacobian,compute_derivative, &
         ires = this%dbase_rxn%spec_ids(j)
       endif
       Jacobian(ires, icomp) = Jacobian(ires,icomp) &
-                            - this%dbase_rxn%stoich(j) * drate_dinh(i) 
+                            - this%dbase_rxn%stoich(j) * drate_dinh(i)
     enddo
   enddo
 
@@ -707,7 +707,7 @@ end subroutine MicrobialReact
 
 ! ************************************************************************** !
 !
-! MicrobialDestroy: Destroys allocatable or pointer objects created in this 
+! MicrobialDestroy: Destroys allocatable or pointer objects created in this
 !                  module
 ! author: Guoping Tang
 ! date: 11/25/13
@@ -718,15 +718,15 @@ subroutine MicrobialDestroy(this)
   use Utility_module, only : DeallocateArray
 
   implicit none
-  
-  class(reaction_sandbox_microbial_type) :: this  
+
+  class(reaction_sandbox_microbial_type) :: this
 
   type(rate_type), pointer :: cur_rate, prev_rate
 
-  call DatabaseRxnDestroy(this%dbase_rxn)    
+  call DatabaseRxnDestroy(this%dbase_rxn)
 
   cur_rate => this%Inhibition
-  do 
+  do
     if(.not.associated(cur_rate)) exit
        prev_rate => cur_rate
        cur_rate => cur_rate%next
@@ -734,10 +734,10 @@ subroutine MicrobialDestroy(this)
        nullify(prev_rate)
   enddo
 
-  call DeallocateArray(this%ispec_inh) 
+  call DeallocateArray(this%ispec_inh)
 
-  call DeallocateArray(this%inhibition_coef) 
- 
+  call DeallocateArray(this%inhibition_coef)
+
 end subroutine MicrobialDestroy
 
 end module Reaction_Sandbox_Microbial_class

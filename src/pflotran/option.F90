@@ -162,6 +162,10 @@ module Option_module
     PetscReal :: min_allowable_scale
 
     PetscBool :: print_ekg
+#ifdef ELM_PFLOTRAN
+    PetscReal :: dt_min
+    PetscBool :: mapping_files
+#endif
 
   end type option_type
 
@@ -551,6 +555,17 @@ subroutine OptionInitRealization(option)
   option%numerical_derivatives_multi_coupling = PETSC_FALSE
   option%compute_statistics = PETSC_FALSE
   option%compute_mass_balance_new = PETSC_FALSE
+
+!fmy: mass_balance for bc/ss IS needed by default if coupled with CLM
+#ifdef ELM_PFLOTRAN
+  option%compute_mass_balance_new = PETSC_TRUE
+  option%mapping_files = PETSC_FALSE
+  ! user-defined CLM-PFLOTRAN mesh maps NOT provided (default)
+  option%dt_min = 1.d-20   ! Ten zeptoseconds
+  ! temp bring back by yx, for reaction_sandbox_denitr etc. (2024-03-28)
+#endif
+!fmy: mass_balance for bc/ss IS needed by default if coupled with CLM
+
   option%mass_bal_detailed = PETSC_FALSE
 
   option%use_touch_options = PETSC_FALSE

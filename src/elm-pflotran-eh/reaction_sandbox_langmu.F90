@@ -7,11 +7,11 @@ module Reaction_Sandbox_Langmuir_class
   use Global_Aux_module
   use Reactive_Transport_Aux_module
   use PFLOTRAN_Constants_module
-  
+
   implicit none
-  
+
   private
-  
+
   type, public, &
     extends(reaction_sandbox_base_type) :: reaction_sandbox_langmuir_type
     character(len=MAXWORDLENGTH) :: name_aq
@@ -44,7 +44,7 @@ contains
 function LangmuirCreate()
 
   implicit none
-  
+
   class(reaction_sandbox_langmuir_type), pointer :: LangmuirCreate
 
 ! 4. Add code to allocate object and initialized all variables to zero and
@@ -58,8 +58,8 @@ function LangmuirCreate()
   LangmuirCreate%k_equilibrium = 2.5d+3
   LangmuirCreate%s_max = 1.0d-3
   LangmuirCreate%x0eps = 1.0d-21
-  nullify(LangmuirCreate%next)  
-      
+  nullify(LangmuirCreate%next)
+
 end function LangmuirCreate
 
 ! ************************************************************************** !
@@ -76,17 +76,17 @@ subroutine LangmuirRead(this,input,option)
   use String_module
   use Input_Aux_module
   use Units_module, only : UnitsConvertToInternal
-  
+
   implicit none
-  
+
   class(reaction_sandbox_langmuir_type) :: this
   type(input_type), pointer :: input
   type(option_type) :: option
 
   PetscInt :: i
   character(len=MAXWORDLENGTH) :: word, name
-  
-  do 
+
+  do
     call InputReadPflotranString(input,option)
     if (InputError(input)) exit
     if (InputCheckExit(input,option)) exit
@@ -94,7 +94,7 @@ subroutine LangmuirRead(this,input,option)
     call InputReadWord(input,option,word,PETSC_TRUE)
     call InputErrorMsg(input,option,'keyword', &
                        'CHEMISTRY,REACTION_SANDBOX,LANGMUIR')
-    call StringToUpper(word)   
+    call StringToUpper(word)
 
     select case(trim(word))
      case('NAME_AQ')
@@ -125,7 +125,7 @@ subroutine LangmuirRead(this,input,option)
           call printErrMsg(option)
     end select
   enddo
-  
+
 end subroutine LangmuirRead
 
 ! ************************************************************************** !
@@ -144,7 +144,7 @@ subroutine LangmuirSetup(this,reaction,option)
   use Reaction_Immobile_Aux_module, only : GetImmobileSpeciesIDFromName
 
   implicit none
-  
+
   class(reaction_sandbox_langmuir_type) :: this
   class(reaction_rt_type) :: reaction
   type(option_type) :: option
@@ -192,12 +192,12 @@ subroutine LangmuirReact(this,Residual,Jacobian,compute_derivative, &
 
   implicit none
 
-  class(reaction_sandbox_langmuir_type) :: this  
+  class(reaction_sandbox_langmuir_type) :: this
   type(option_type) :: option
   class(reaction_rt_type) :: reaction
   type(reactive_transport_auxvar_type) :: rt_auxvar
   type(global_auxvar_type) :: global_auxvar
-  class(material_auxvar_type) :: material_auxvar
+  type(material_auxvar_type) :: material_auxvar
 
   PetscBool :: compute_derivative
   PetscReal :: Residual(reaction%ncomp)
@@ -360,7 +360,7 @@ end subroutine LangmuirReact
 
 ! ************************************************************************** !
 !
-! LangmuirDestroy: Destroys allocatable or pointer objects created in this 
+! LangmuirDestroy: Destroys allocatable or pointer objects created in this
 !                  module
 ! author: Guoping Tang
 ! date: 09/09/2013
@@ -369,8 +369,8 @@ end subroutine LangmuirReact
 subroutine LangmuirDestroy(this)
 
   implicit none
-  
-  class(reaction_sandbox_langmuir_type) :: this  
+
+  class(reaction_sandbox_langmuir_type) :: this
 
 end subroutine LangmuirDestroy
 

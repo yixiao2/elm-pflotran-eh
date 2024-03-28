@@ -45,7 +45,7 @@ module pflotran_elm_main_module
 
     type(mapping_type),                pointer :: map_elm_2dbot_to_pf_2dbot
     type(mapping_type),                pointer :: map_pf_2dbot_to_elm_2dbot
-     
+
     PetscInt :: nlelm
     PetscInt :: ngelm
 
@@ -101,16 +101,16 @@ contains
 ! ************************************************************************************ !
 
   subroutine pflotranModelCreate(mpicomm, pflotran_inputdir, pflotran_prefix, model)
-  ! 
+  !
   ! Allocates and initializes the pflotranModel object.
   ! It performs the same sequence of commands as done in pflotran.F90
   ! before model integration is performed by the call to StepperRun()
   ! routine
-  ! 
+  !
   ! Author: Gautam Bisht
   ! Date: 9/10/2010
   ! Revised by Yi Xiao, PNNL, @March 2024
-  ! 
+  !
 
     use Option_module
     use Simulation_Base_class
@@ -120,7 +120,7 @@ contains
     use PFLOTRAN_Constants_module
     use Output_Aux_module, only : INSTANTANEOUS_VARS
     use PFLOTRAN_Provenance_module, only : PrintProvenanceToScreen
-  
+
     implicit none
 
     PetscInt, intent(in) :: mpicomm
@@ -185,14 +185,14 @@ contains
 ! ************************************************************************** !
 
   subroutine pflotranModelStepperRunInit(model)
-  ! 
+  !
   ! It performs the same execution of commands
   ! that are carried out in StepperRun() before the model integration
   ! begins over the entire simulation time interval
-  ! 
+  !
   ! Author: Gautam Bisht
   ! Date: 9/10/2010
-  ! 
+  !
 
     type(pflotran_model_type), pointer, intent(inout) :: model
 
@@ -6322,6 +6322,6 @@ end subroutine pflotranModelSetInternalTHStatesfromELM
 
   ! ************************************************************************** !
 #endif
-  
+
 end module pflotran_elm_main_module
 

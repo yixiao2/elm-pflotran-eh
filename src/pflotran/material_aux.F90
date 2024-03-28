@@ -924,7 +924,7 @@ subroutine MaterialCompressSoilLeijnse(auxvar,pressure, &
 
   compressibility = auxvar%soil_properties(soil_compressibility_index)
 
-  #endif
+#endif
 
   !compression = &
   !  exp(-1.d0 * compressibility * &

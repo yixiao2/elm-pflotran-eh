@@ -8,11 +8,11 @@ module Reaction_Sandbox_Denitr_class
   use Reactive_Transport_Aux_module
   use PFLOTRAN_Constants_module
   use Utility_module, only : HFunctionSmooth
-  
+
   implicit none
-  
+
   private
-  
+
   PetscInt, parameter :: TEMPERATURE_RESPONSE_FUNCTION_CLMCN = 1
   PetscInt, parameter :: TEMPERATURE_RESPONSE_FUNCTION_Q10   = 2
 
@@ -48,7 +48,7 @@ contains
 function DenitrCreate()
 
   implicit none
-  
+
   class(reaction_sandbox_denitr_type), pointer :: DenitrCreate
 
 ! Add code to allocate object and initialized all variables to zero and
@@ -66,7 +66,7 @@ function DenitrCreate()
   DenitrCreate%x0eps = 1.0d-20
 
   nullify(DenitrCreate%next)
-      
+
 end function DenitrCreate
 
 ! ************************************************************************** !
@@ -80,17 +80,17 @@ subroutine DenitrRead(this,input,option)
   use String_module
   use Input_Aux_module
   use Units_module, only : UnitsConvertToInternal
-  
+
   implicit none
-  
+
   class(reaction_sandbox_denitr_type) :: this
   type(input_type), pointer :: input
   type(option_type) :: option
 
   PetscInt :: i
   character(len=MAXWORDLENGTH) :: word
-  
-  do 
+
+  do
     call InputReadPflotranString(input,option)
     if (InputError(input)) exit
     if (InputCheckExit(input,option)) exit
@@ -98,7 +98,7 @@ subroutine DenitrRead(this,input,option)
     call InputReadWord(input,option,word,PETSC_TRUE)
     call InputErrorMsg(input,option,'keyword', &
                        'CHEMISTRY,REACTION_SANDBOX,DENITRIFICATION')
-    call StringToUpper(word)   
+    call StringToUpper(word)
 
     select case(trim(word))
       case('TEMPERATURE_RESPONSE_FUNCTION')
@@ -110,14 +110,14 @@ subroutine DenitrRead(this,input,option)
           call InputReadWord(input,option,word,PETSC_TRUE)
           call InputErrorMsg(input,option,'keyword', &
             'CHEMISTRY,REACTION_SANDBOX,DENITRIFICATION,TEMPERATURE RESPONSE FUNCTION')
-          call StringToUpper(word)   
+          call StringToUpper(word)
 
           select case(trim(word))
             case('CLMCN')
               this%temperature_response_function = TEMPERATURE_RESPONSE_FUNCTION_CLMCN
             case('Q10')
-              this%temperature_response_function = TEMPERATURE_RESPONSE_FUNCTION_Q10    
-              call InputReadDouble(input,option,this%Q10)  
+              this%temperature_response_function = TEMPERATURE_RESPONSE_FUNCTION_Q10
+              call InputReadDouble(input,option,this%Q10)
               call InputErrorMsg(input,option,'Q10', &
                 'CHEMISTRY,REACTION_SANDBOX_DENITRIFICATION,TEMPERATURE RESPONSE FUNCTION')
             case default
@@ -125,7 +125,7 @@ subroutine DenitrRead(this,input,option)
                 trim(word) // ' not recognized - Valid keyword: "CLMCN","Q10" '
               call printErrMsg(option)
           end select
-        enddo 
+        enddo
 
       case('DENITRIFICATION_RATE_COEF')
         call InputReadDouble(input,option,this%k_deni_max)
@@ -145,7 +145,7 @@ subroutine DenitrRead(this,input,option)
         call printErrMsg(option)
     end select
   enddo
-  
+
 end subroutine DenitrRead
 
 ! ************************************************************************** !
@@ -161,13 +161,13 @@ subroutine DenitrSetup(this,reaction,option)
   use Reaction_Immobile_Aux_module, only : GetImmobileSpeciesIDFromName
 
   implicit none
-  
+
   class(reaction_sandbox_denitr_type) :: this
   class(reaction_rt_type) :: reaction
   type(option_type) :: option
 
   character(len=MAXWORDLENGTH) :: word
- 
+
   word = 'NO3-'
   this%ispec_no3 = GetPrimarySpeciesIDFromName(word,reaction, &
                         PETSC_FALSE,option)
@@ -207,7 +207,7 @@ subroutine DenitrSetup(this,reaction,option)
      call printErrMsg(option)
   endif
 #endif
- 
+
 end subroutine DenitrSetup
 
 !****************************************************************************************!
@@ -234,7 +234,7 @@ subroutine DenitrReact(this,Residual,Jacobian,compute_derivative, &
   class(reaction_rt_type) :: reaction
   type(reactive_transport_auxvar_type) :: rt_auxvar
   type(global_auxvar_type) :: global_auxvar
-  class(material_auxvar_type) :: material_auxvar
+  type(material_auxvar_type) :: material_auxvar
 
   PetscBool :: compute_derivative
   PetscReal :: Residual(reaction%ncomp)
@@ -413,7 +413,7 @@ end subroutine DenitrReact
 subroutine DenitrDestroy(this)
 
   implicit none
-  
+
   class(reaction_sandbox_denitr_type) :: this
 
 end subroutine DenitrDestroy

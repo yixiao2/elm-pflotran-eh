@@ -164,7 +164,7 @@ contains
     end if
 
     call OptionInitPetsc(model%option)
-    if (model%option%myrank == model%option%io_rank .and. &
+    if (model%option%myrank == model%option%comm%io_rank .and. &
         model%option%print_to_screen) then
       call PrintProvenanceToScreen()
     end if
@@ -257,7 +257,7 @@ contains
     if (associated(realization) .and. associated(simulation)) then
       ! turn off the 'print out' if required from ELM
       if(.not.isprintout) then
-        if (model%option%io_rank == model%option%myrank) then
+        if (model%option%comm%io_rank == model%option%myrank) then
           write(model%option%fid_out, *) 'NOTE: h5 output at input-defined interval ' // &
             'for subsurface flow from PFLOTRAN IS OFF! '
         endif
@@ -489,7 +489,7 @@ contains
 
     option => model%option
     if(isprintout) then
-      if (option%io_rank == option%myrank) then
+      if (option%comm%io_rank == option%myrank) then
         write(option%fid_out, *) '>>>> Inserting waypoint at pause_time (s) = ', pause_time
         write(option%fid_out, *) '>>>> for ELM timestep: ', pause_time/dtime
       endif
@@ -754,10 +754,10 @@ contains
              option%io_buffer = "INFO: ELM column dimension will over-ride PF structured CARTESIAN_GRID."
              call printMsg(option)
 
-             if (option%io_rank == option%myrank) then
+             if (option%comm%io_rank == option%myrank) then
                write(option%fid_out, &
               '(/," Requested processors and decomposition = ", i5,", npx,y,z= ",3i4)') &
-               option%mycommsize, &
+               option%comm%size, &
                grid%structured_grid%npx, &
                grid%structured_grid%npy, &
                grid%structured_grid%npz

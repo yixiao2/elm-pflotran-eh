@@ -269,7 +269,7 @@ contains
     end if
 
     !
-    if(option%myrank == option%io_rank) then
+    if(option%myrank == option%comm%io_rank) then
       ! some information on ELM-PFLOTRAN mesh matching-up (passing)
       write(*,*) 'ELM nlevsoil mapped = ', map%elm_nlev_mapped
       write(*,*) 'PFLOTRAN nlevsoil mapped = ', map%pflotran_nlev_mapped
@@ -339,15 +339,15 @@ contains
 
 
       ! calculting mapping matrix/vecs to be send to each processor equally (almost)
-      nwts_tmp = nwts/option%mycommsize
-      remainder= nwts - nwts_tmp*option%mycommsize
+      nwts_tmp = nwts/option%comm%size
+      remainder= nwts - nwts_tmp*option%comm%size
 
       allocate(wts_row_tmp(nwts_tmp+1))   ! row number is for destination mesh
       allocate(wts_col_tmp(nwts_tmp+1))
       allocate(wts_tmp(nwts_tmp+1))
 
       cum_nread = 0
-      do irank = 0,option%mycommsize-1
+      do irank = 0,option%comm%size-1
 
         ! Determine the number of rows
         nread = nwts_tmp
@@ -417,7 +417,7 @@ contains
     else
       ! Other ranks receive data from io_rank
 
-      call MPI_Recv(nread,1,MPI_INTEGER,option%io_rank,MPI_ANY_TAG, &
+      call MPI_Recv(nread,1,MPI_INTEGER,option%comm%io_rank,MPI_ANY_TAG, &
                     option%mycomm,status_mpi,ierr)
 
       map%s2d_nwts = nread
@@ -425,14 +425,14 @@ contains
       allocate(map%s2d_jcsr(map%s2d_nwts))
       allocate(map%s2d_wts( map%s2d_nwts))
 
-      call MPI_Recv(map%s2d_icsr,nread,MPI_INTEGER,option%io_rank,MPI_ANY_TAG, &
+      call MPI_Recv(map%s2d_icsr,nread,MPI_INTEGER,option%comm%io_rank,MPI_ANY_TAG, &
                     option%mycomm,status_mpi,ierr)
-      call MPI_Recv(map%s2d_jcsr,nread,MPI_INTEGER,option%io_rank,MPI_ANY_TAG, &
+      call MPI_Recv(map%s2d_jcsr,nread,MPI_INTEGER,option%comm%io_rank,MPI_ANY_TAG, &
                     option%mycomm,status_mpi,ierr)
-      call MPI_Recv(map%s2d_wts,nread,MPI_DOUBLE_PRECISION,option%io_rank,MPI_ANY_TAG, &
+      call MPI_Recv(map%s2d_wts,nread,MPI_DOUBLE_PRECISION,option%comm%io_rank,MPI_ANY_TAG, &
                     option%mycomm,status_mpi,ierr)
 
-    end if !else of if(option%myrank == option%io_rank)
+    end if !else of if(option%myrank == option%comm%io_rank)
 
   end subroutine MappingFromELMGrids
 
@@ -483,7 +483,7 @@ contains
     card     = 'MppingReadTxtFile'
 
     ! Read ASCII file through io_rank and communicate to other ranks
-    if(option%myrank == option%io_rank) then
+    if(option%myrank == option%comm%io_rank) then
 
       input => InputCreate(IUNIT_TEMP,map_filename,option)
 
@@ -529,14 +529,14 @@ contains
         end select
       enddo
       
-      nwts_tmp = nwts/option%mycommsize
-      remainder= nwts - nwts_tmp*option%mycommsize
+      nwts_tmp = nwts/option%comm%size
+      remainder= nwts - nwts_tmp*option%comm%size
       
       allocate(wts_row_tmp(nwts_tmp + 1))
       allocate(wts_col_tmp(nwts_tmp + 1))
       allocate(wts_tmp(    nwts_tmp + 1))
 
-      do irank = 0,option%mycommsize-1
+      do irank = 0,option%comm%size-1
         
         ! Determine the number of row to be read
         nread = nwts_tmp
@@ -621,7 +621,7 @@ contains
       ! Other ranks receive data from io_rank
       
       ! Get the number of data
-      call MPI_Recv(map%s2d_nwts,1,MPI_INTEGER,option%io_rank,MPI_ANY_TAG, &
+      call MPI_Recv(map%s2d_nwts,1,MPI_INTEGER,option%comm%io_rank,MPI_ANY_TAG, &
                     option%mycomm,status_mpi,ierr)
 
       ! Allocate memory
@@ -629,11 +629,11 @@ contains
       allocate(map%s2d_jcsr(map%s2d_nwts))
       allocate(map%s2d_wts( map%s2d_nwts))
       
-      call MPI_Recv(map%s2d_icsr,map%s2d_nwts,MPI_INTEGER,option%io_rank,MPI_ANY_TAG, &
+      call MPI_Recv(map%s2d_icsr,map%s2d_nwts,MPI_INTEGER,option%comm%io_rank,MPI_ANY_TAG, &
                     option%mycomm,status_mpi,ierr)
-      call MPI_Recv(map%s2d_jcsr,map%s2d_nwts,MPI_INTEGER,option%io_rank,MPI_ANY_TAG, &
+      call MPI_Recv(map%s2d_jcsr,map%s2d_nwts,MPI_INTEGER,option%comm%io_rank,MPI_ANY_TAG, &
                     option%mycomm,status_mpi,ierr)
-      call MPI_Recv(map%s2d_wts,map%s2d_nwts,MPI_DOUBLE_PRECISION,option%io_rank,MPI_ANY_TAG, &
+      call MPI_Recv(map%s2d_wts,map%s2d_nwts,MPI_DOUBLE_PRECISION,option%comm%io_rank,MPI_ANY_TAG, &
                     option%mycomm,status_mpi,ierr)
                     
     endif
@@ -645,7 +645,7 @@ contains
     temp_int_array(4) = map%pflotran_nlev
     temp_int_array(5) = map%pflotran_nlev_mapped
 
-    call MPI_Bcast(temp_int_array,FIVE_INTEGER,MPI_INTEGER,option%io_rank, &
+    call MPI_Bcast(temp_int_array,FIVE_INTEGER,MPI_INTEGER,option%comm%io_rank, &
                  option%mycomm,ierr)
     
     map%elm_nlevsoi = temp_int_array(1)

@@ -32,7 +32,7 @@ module pflotran_elm_main_module
   type, public :: pflotran_model_type
     class(simulation_base_type),  pointer :: simulation
     !type(multi_simulation_type), pointer :: multisimulation
-    !type(option_type),      pointer :: option
+    type(option_type),      pointer :: option
     class(driver_type), pointer :: driver
     PetscInt :: iflag
 
@@ -58,7 +58,7 @@ module pflotran_elm_main_module
        pflotranModelStepperRunTillPauseTime, &
        pflotranModelSetupRestart,            &
        pflotranModelStepperRunFinalize,      &
-       pflotranModelStepperCheckpoint,       &
+       !pflotranModelStepperCheckpoint,       & ! commented by yx 2024-03-28
        pflotranModelDestroy,                 &
        ! soil domain
        pflotranModelSetSoilDimension,         &
@@ -114,7 +114,7 @@ contains
 
     use Option_module
     use Simulation_Base_class
-    use Multi_Simulation_module
+    ! use Multi_Simulation_module
     use Factory_PFLOTRAN_module
     use Factory_Subsurface_module
     use PFLOTRAN_Constants_module
@@ -128,6 +128,8 @@ contains
     character(len=256), intent(in) :: pflotran_prefix
 
     type(pflotran_model_type),      pointer :: model
+    class(driver_type), pointer :: driver ! added by yx 2024-03-29.
+    ![to solve] driver is to solve multisimulation, but driver vs model%option%driver?
 
     allocate(model)
 
@@ -146,16 +148,16 @@ contains
     ! prefix string. If the driver wants to use pflotran.in, then it
     ! should explicitly request that with 'pflotran'.
     if (len(trim(pflotran_prefix)) > 1) then
-      model%option%input_prefix = trim(pflotran_prefix)
+      model%option%driver%input_prefix = trim(pflotran_prefix)
 
       if (len(trim(pflotran_inputdir)) > 1) then
-        model%option%input_prefix = trim(pflotran_inputdir) // '/' // trim(pflotran_prefix)
+        model%option%driver%input_prefix = trim(pflotran_inputdir) // '/' // trim(pflotran_prefix)
 
       else
-        model%option%input_prefix = trim(pflotran_prefix)
+        model%option%driver%input_prefix = trim(pflotran_prefix)
       endif
 
-      model%option%input_filename = trim(model%option%input_prefix) // '.in'
+      model%option%input_filename = trim(model%option%driver%input_prefix) // '.in'
       model%option%global_prefix = trim(pflotran_prefix)
     else
       model%option%io_buffer = 'The external driver must provide the ' // &
@@ -165,7 +167,7 @@ contains
 
     call OptionInitPetsc(model%option)
     if (model%option%myrank == model%option%comm%io_rank .and. &
-        model%option%print_to_screen) then
+        model%option%driver%print_flags%print_to_screen) then
       call PrintProvenanceToScreen()
     end if
 
@@ -509,24 +511,24 @@ contains
 
 ! ************************************************************************** !
 
-  subroutine pflotranModelStepperCheckpoint(model, id_stamp)
-  !
-  ! wrapper around StepperCheckpoint
-  ! NOTE(bja, 2013-06-27) : the date stamp from elm is 32 characters
-  !
+  ! subroutine pflotranModelStepperCheckpoint(model, id_stamp)
+  ! !
+  ! ! wrapper around StepperCheckpoint
+  ! ! NOTE(bja, 2013-06-27) : the date stamp from elm is 32 characters
+  ! !
 
-    use Option_module
+  !   use Option_module
 
-    implicit none
+  !   implicit none
 
-    type(pflotran_model_type), pointer :: model
-    character(len=MAXSTRINGLENGTH), intent(in) :: id_stamp
+  !   type(pflotran_model_type), pointer :: model
+  !   character(len=MAXSTRINGLENGTH), intent(in) :: id_stamp
 
-    if (associated(model%simulation%process_model_coupler_list%checkpoint_option)) then
-      call model%simulation%process_model_coupler_list%Checkpoint(id_stamp)
-    endif
+  !   if (associated(model%simulation%process_model_coupler_list%checkpoint_option)) then
+  !     call model%simulation%process_model_coupler_list%Checkpoint(id_stamp)
+  !   endif
 
-  end subroutine pflotranModelStepperCheckpoint
+  ! end subroutine pflotranModelStepperCheckpoint
 
 ! ************************************************************************** !
 
@@ -558,8 +560,8 @@ contains
   ! Date: 9/10/2010
   !
 
-    use Factory_PFLOTRAN_module, only : PFLOTRANFinalize
-    use Option_module, only : OptionFinalize
+    use Factory_PFLOTRAN_module, only : FactoryPFLOTRANFinalize
+    !use Option_module, only : OptionFinalize - commented by yx 2024-03-29
 
     implicit none
 
@@ -570,8 +572,8 @@ contains
     if(associated(model%simulation)) deallocate(model%simulation)
     nullify(model%simulation)
 
-    call PFLOTRANFinalize(model%option)
-    call OptionFinalize(model%option)
+    call FactoryPFLOTRANFinalize(model%option%driver)
+    !call OptionFinalize(model%option) - commented by yx 2024-03-29
 
     call ELMPFLOTRANIDataDestroy()
 
@@ -933,6 +935,7 @@ contains
     call GridComputeInternalConnect(grid, option)             ! cell internal connection distances
     call PatchProcessCouplers(patch,realization%flow_conditions,             &  ! BC/IC/SrcSink connection (face) areas
                               realization%transport_conditions,              &
+                              realization%geophysics_conditions,              &
                               realization%option)
 
     ! re-assign updated field%volume0 to material_auxvar%volume
@@ -1276,108 +1279,108 @@ contains
 
       !F.-M. Yuan: (1) the following IS to pass ELM soil hydraulic data into 'saturation_function';
       !            (2) data-passing IS by from 'ghosted_id' to PF's 'local_id'.
-      if(option%iflowmode == TH_MODE) then
+      ! if(option%iflowmode == TH_MODE) then
 
-        ! TH_MODE now are using 'charateristic_curves' module
-        characteristic_curves => patch%  &
-            characteristic_curves_array(patch%cc_id(ghosted_id))%ptr  ! MUST be in 'ghosted_id' for 'cc_id(:)'.
+      !   ! TH_MODE now are using 'charateristic_curves' module
+      !   characteristic_curves => patch%  &
+      !       characteristic_curves_array(patch%cc_id(ghosted_id))%ptr  ! MUST be in 'ghosted_id' for 'cc_id(:)'.
 
-        select type(sf => characteristic_curves%saturation_function)
-          !class is(sat_func_VG_type)
-             ! not-yet (TODO)
+      !   select type(sf => characteristic_curves%saturation_function)
+      !     !class is(sat_func_VG_type)
+      !        ! not-yet (TODO)
 
-          class is(sat_func_BC_type)
-            sf_func_type = BROOKS_COREY
+      !     class is(sat_func_BC_type)
+      !       sf_func_type = BROOKS_COREY
 
-            ! currently BC-Burdine saturation/permisivity function type in PFLOTRAN,
-            ! with specified values to match with Clapp-Hornberger Eq. used in ELM biogeophysics
+      !       ! currently BC-Burdine saturation/permisivity function type in PFLOTRAN,
+      !       ! with specified values to match with Clapp-Hornberger Eq. used in ELM biogeophysics
 
-            ! Clapp-Hornberger: soilpsi = sucsat * (-9.81) * (fsattmp)**(-bsw)  ! mm H2O Head --> -pa
-            !                   K = Ks*fsattmp**(3+2*bsw)
-            !         vs.
-            ! BC-Burdine: pc =  (Se**(-1.d0/lambda))/alpha, with Se=(lsat-Sr)/(1-Sr)
-            !             relative_perm = Se**power, with power = 3+2/lamda
+      !       ! Clapp-Hornberger: soilpsi = sucsat * (-9.81) * (fsattmp)**(-bsw)  ! mm H2O Head --> -pa
+      !       !                   K = Ks*fsattmp**(3+2*bsw)
+      !       !         vs.
+      !       ! BC-Burdine: pc =  (Se**(-1.d0/lambda))/alpha, with Se=(lsat-Sr)/(1-Sr)
+      !       !             relative_perm = Se**power, with power = 3+2/lamda
 
 
-            sf%alpha  = 1.d0/(9.81d0*sucsat_pf_loc(veclocal_id))
-            sf%lambda = 1.d0/bsw_pf_loc(veclocal_id)
-            ! A NOTE here:
-            ! 'lambda' of < 0.16 (or 'bsw'>6) causes large residual saturation(Sr/pcmax) in SF_BC function.
-            ! one unreasonable result of this may be large liq. water saturation under frozen condition
-            ! (TODO - it's from high SOM soil layers, implying further work on Pedo-Transfer function for peat
-            !  e.g. Letts et al. 2000. Fibric b=2.7, Sr=0.04/0.93;
-            !                          Hemic  b=6.1, Sr=0.15/0.88;
-            !                          Sapric b=12., Sr=0.22/0.83.
-            sf%Sr     = 0.0d0
+      !       sf%alpha  = 1.d0/(9.81d0*sucsat_pf_loc(veclocal_id))
+      !       sf%lambda = 1.d0/bsw_pf_loc(veclocal_id)
+      !       ! A NOTE here:
+      !       ! 'lambda' of < 0.16 (or 'bsw'>6) causes large residual saturation(Sr/pcmax) in SF_BC function.
+      !       ! one unreasonable result of this may be large liq. water saturation under frozen condition
+      !       ! (TODO - it's from high SOM soil layers, implying further work on Pedo-Transfer function for peat
+      !       !  e.g. Letts et al. 2000. Fibric b=2.7, Sr=0.04/0.93;
+      !       !                          Hemic  b=6.1, Sr=0.15/0.88;
+      !       !                          Sapric b=12., Sr=0.22/0.83.
+      !       sf%Sr     = 0.0d0
 
-            if(associated(sf%sat_poly) .and. associated(sf%pres_poly)) then
-              call sf%SetupPolynomials(option, 'Error for setup smoothing saturation function')
-            endif
+      !       if(associated(sf%sat_poly) .and. associated(sf%pres_poly)) then
+      !         call sf%SetupPolynomials(option, 'Error for setup smoothing saturation function')
+      !       endif
 
-          class default
-            option%io_buffer = 'Currently ONLY support Brooks_COREY saturation function type' // &
-              ' when coupled with ELM.'
-              call printErrMsg(option)
+      !     class default
+      !       option%io_buffer = 'Currently ONLY support Brooks_COREY saturation function type' // &
+      !         ' when coupled with ELM.'
+      !         call printErrMsg(option)
 
-        end select
+      !   end select
 
-        select type(rpf => characteristic_curves%liq_rel_perm_function)
-          !class is(rpf_Mualem_VG_liq_type)
-              ! (TODO)
+      !   select type(rpf => characteristic_curves%liq_rel_perm_function)
+      !     !class is(rpf_Mualem_VG_liq_type)
+      !         ! (TODO)
 
-          class is(rpf_Burdine_BC_liq_type)
-            rpf_func_type = BURDINE
+      !     class is(rpf_Burdine_BC_liq_type)
+      !       rpf_func_type = BURDINE
 
-            rpf%lambda = 1.d0/bsw_pf_loc(veclocal_id)
-            ! A NOTE here:
-            ! 'lambda' of < 0.16 (or 'bsw'>6) causes large residual saturation(Sr/pcmax) in SF_BC function.
-            ! one unreasonable result of this may be large liq. water saturation under frozen condition
-            ! (TODO - it's from high SOM soil layers, implying further work on Pedo-Transfer function for peat
-            !  e.g. Letts et al. 2000. Fibric b=2.7, Sr=0.04/0.93;
-            !                          Hemic  b=6.1, Sr=0.15/0.88;
-            !                          Sapric b=12., Sr=0.22/0.83.
-            rpf%Sr     = 0.0d0
+      !       rpf%lambda = 1.d0/bsw_pf_loc(veclocal_id)
+      !       ! A NOTE here:
+      !       ! 'lambda' of < 0.16 (or 'bsw'>6) causes large residual saturation(Sr/pcmax) in SF_BC function.
+      !       ! one unreasonable result of this may be large liq. water saturation under frozen condition
+      !       ! (TODO - it's from high SOM soil layers, implying further work on Pedo-Transfer function for peat
+      !       !  e.g. Letts et al. 2000. Fibric b=2.7, Sr=0.04/0.93;
+      !       !                          Hemic  b=6.1, Sr=0.15/0.88;
+      !       !                          Sapric b=12., Sr=0.22/0.83.
+      !       rpf%Sr     = 0.0d0
 
-            if(associated(rpf%poly)) then
-              call rpf%SetupPolynomials(option, 'Error for setup smoothing liq. permeability function')
-            endif
+      !       if(associated(rpf%poly)) then
+      !         call rpf%SetupPolynomials(option, 'Error for setup smoothing liq. permeability function')
+      !       endif
 
-          class default
-            option%io_buffer = 'Currently ONLY support Brooks_COREY-Burdine liq. ' // &
-             ' permissivity function type when coupled with ELM.'
-            call printErrMsg(option)
+      !     class default
+      !       option%io_buffer = 'Currently ONLY support Brooks_COREY-Burdine liq. ' // &
+      !        ' permissivity function type when coupled with ELM.'
+      !       call printErrMsg(option)
 
-        end select
+      !   end select
 
-        !
-        select case(option%iflowmode)
-          case(TH_MODE)
-            th_auxvar   => th_auxvars(ghosted_id)
+      !   !
+      !   select case(option%iflowmode)
+      !     case(TH_MODE)
+      !       th_auxvar   => th_auxvars(ghosted_id)
 
-            iphas = patch%aux%Global%auxvars(ghosted_id)%istate
-            icc   = patch%cc_id(ghosted_id)
-            icct  = patch%cct_id(ghosted_id)
+      !       iphas = patch%aux%Global%auxvars(ghosted_id)%istate
+      !       icc   = patch%cc_id(ghosted_id)
+      !       icct  = patch%cct_id(ghosted_id)
 
-            th_parameter%alpha(icct)    = 1.d0/(9.81d0*sucsat_pf_loc(veclocal_id))
-            th_parameter%ckwet(icct)    = tkwet_pf_loc(veclocal_id)*option%scale   ! W/m/K --> MW/m/K
-            !(note: option%scale multiplier is done in TH.F90: setuppatch(), so it's needed here too)
-            th_parameter%ckdry(icct)    = tkdry_pf_loc(veclocal_id)*option%scale   ! W/m/K --> MW/m/K
-            th_parameter%ckfrozen(icct) = tkfrz_pf_loc(veclocal_id)*option%scale   ! W/m/K --> MW/m/K
-            th_parameter%dencpr(icct)   = hcapvs_pf_loc(veclocal_id)*option%scale  ! J/m3-particle/K --> MJ/m3-particle/K
+      !       th_parameter%alpha(icct)    = 1.d0/(9.81d0*sucsat_pf_loc(veclocal_id))
+      !       th_parameter%ckwet(icct)    = tkwet_pf_loc(veclocal_id)*option%scale   ! W/m/K --> MW/m/K
+      !       !(note: option%scale multiplier is done in TH.F90: setuppatch(), so it's needed here too)
+      !       th_parameter%ckdry(icct)    = tkdry_pf_loc(veclocal_id)*option%scale   ! W/m/K --> MW/m/K
+      !       th_parameter%ckfrozen(icct) = tkfrz_pf_loc(veclocal_id)*option%scale   ! W/m/K --> MW/m/K
+      !       th_parameter%dencpr(icct)   = hcapvs_pf_loc(veclocal_id)*option%scale  ! J/m3-particle/K --> MJ/m3-particle/K
 
-        end select
+      !   end select
 
-      endif
+      ! endif
 
-      ! hydraulic conductivity => permissivity IS going to 'field%'
-      ! perm = hydraulic-conductivity * viscosity / ( density * gravity )
-      ! [m^2]          [mm/sec]
-      if(option%iflowmode==TH_MODE) then
-           ! F.-M. Yuan: without flowmode, the folllowing will throw out segementation fault error
-           perm_xx_loc_p(local_id) = hksat_x_pf_loc(veclocal_id)*vis/(den*grav)/1000.d0
-           perm_yy_loc_p(local_id) = hksat_y_pf_loc(veclocal_id)*vis/(den*grav)/1000.d0
-           perm_zz_loc_p(local_id) = hksat_z_pf_loc(veclocal_id)*vis/(den*grav)/1000.d0
-      endif
+      ! ! hydraulic conductivity => permissivity IS going to 'field%'
+      ! ! perm = hydraulic-conductivity * viscosity / ( density * gravity )
+      ! ! [m^2]          [mm/sec]
+      ! if(option%iflowmode==TH_MODE) then
+      !      ! F.-M. Yuan: without flowmode, the folllowing will throw out segementation fault error
+      !      perm_xx_loc_p(local_id) = hksat_x_pf_loc(veclocal_id)*vis/(den*grav)/1000.d0
+      !      perm_yy_loc_p(local_id) = hksat_y_pf_loc(veclocal_id)*vis/(den*grav)/1000.d0
+      !      perm_zz_loc_p(local_id) = hksat_z_pf_loc(veclocal_id)*vis/(den*grav)/1000.d0
+      ! endif
 
       porosity_loc_p(local_id) = watsat_pf_loc(veclocal_id)
 
@@ -2247,7 +2250,7 @@ write(option%myrank+200,*) 'checking pflotran-model 2 (PF->ELM lsat):  ', &
 
 
     if (option%iflowmode == TH_MODE .and. &
-        option%th_freezing) then
+        option%flow%th_freezing) then
 
       TH_auxvars => patch%aux%TH%auxvars
 

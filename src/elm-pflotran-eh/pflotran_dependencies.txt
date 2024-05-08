@@ -16,7 +16,14 @@ pflotran_elm_main.o : \
   pflotran_constants.o \
   pflotran_provenance.o \
   pm_base.o \
-  simulation_base.o
+  simulation_base.o \
+  communicator_aux.o \
+  driver.o \
+  eos.o \
+  hdf5_aux.o \
+  input_aux.o \
+  logging.o \
+  print.o
 pflotran_elm_setmapping.o : \
   pflotran_elm_main.o \
   mapping.o

@@ -13,18 +13,16 @@ module pflotran_elm_main_module
   use petscvec
 
   use PFLOTRAN_Constants_module
-  use Option_module!, only : option_type
+  use Option_module, only : option_type
   use Simulation_Base_class, only : simulation_base_type
   !use Multi_Simulation_module, only : multi_simulation_type ![yx]
   use Realization_Base_class, only : realization_base_type
+  use Driver_class
 
   use Mapping_module
   use elmpf_interface_data
 
   use Utility_module, only : where_checkerr
-
-  use Driver_class
-  use Input_Aux_module
 
   implicit none
 
@@ -33,8 +31,8 @@ module pflotran_elm_main_module
   type, public :: pflotran_model_type
     class(simulation_base_type),  pointer :: simulation
     !type(multi_simulation_type), pointer :: multisimulation ![yx]
-    type(option_type),            pointer :: option ![yx 2024-04-12] to remove
-    class(driver_type),           pointer :: driver
+    type(option_type),      pointer :: option
+    class(driver_type), pointer :: driver
     PetscInt :: iflag
 
     PetscReal :: pause_time_1
@@ -110,10 +108,12 @@ contains
   !
   ! Author: Gautam Bisht
   ! Date: 9/10/2010
+  !
   ! Revised by Yi Xiao, PNNL, @March 2024
+  ! modified based on factory_pflotran::FactoryPFLOTRANInitialize()
   !
 
-    use Option_module
+    !use Option_module
     !use Simulation_Base_class
     !use Multi_Simulation_module
     !use Factory_PFLOTRAN_module
@@ -121,79 +121,72 @@ contains
     !use PFLOTRAN_Constants_module
     !use Output_Aux_module, only : INSTANTANEOUS_VARS
     !use PFLOTRAN_Provenance_module, only : PrintProvenanceToScreen
+    !use Driver_class
+    use Simulation_Base_class
     use Factory_PFLOTRAN_module
-    use PFLOTRAN_Constants_module ![yx 2024-04-05]
-    !use elm_interface_pflotranMod, only : pflotran_inputdir, pflotran_prefix
+    use PFLOTRAN_Constants_module
+
     use Communicator_Aux_module
-    use HDF5_Aux_module
+    ! !use Driver_class
     use EOS_module
+    use HDF5_Aux_module
+    ! use Input_Aux_module
+    use Option_module
+    use Print_module
     use Logging_module
+    ! use String_module
+    ! !use Simulation_Base_class
+    ! use Utility_module
 
     implicit none
 
     PetscInt, intent(in) :: mpicomm
     character(len=256), intent(in) :: pflotran_inputdir
     character(len=256), intent(in) :: pflotran_prefix
-    character(len=256) :: msg
 
     type(pflotran_model_type),      pointer :: model
-    !class(driver_type), pointer :: driver ! [yx 2024-03-29]
-    type(option_type), pointer :: option
-    !class(simulation_base_type), pointer :: simulationtest
+    class(driver_type), pointer :: driver
+    class(option_type), pointer :: option
 
     allocate(model)
 
     nullify(model%simulation)
     !nullify(model%multisimulation)
-    nullify(model%option)
+    !nullify(model%option)
 
-    model%driver => DriverCreate()
-    call CommInitPetsc(model%driver%comm)
-    model%option => OptionCreate()
-    option => model%option
-    call OptionSetDriver(option,model%driver)
-    call OptionSetComm(option,model%driver%comm)
+    !model%option => OptionCreate()
+    !call OptionInitMPI(model%option, mpicomm)
+    !call PFLOTRANInitializePrePetsc(model%multisimulation, model%option)
+    driver => DriverCreate()
+    !call FactoryPFLOTRANInitialize(driver, model%simulation) ![yx 2024-04-05]
+    call CommInitPetsc(driver%comm)
+    option => OptionCreate()!option will be destroyed, driver is passed
+    call OptionSetDriver(option, driver)
+    call OptionSetComm(option, driver%comm)
 
     ! NOTE(bja) 2013-06-25 : external driver must provide an input
     ! prefix string. If the driver wants to use pflotran.in, then it
     ! should explicitly request that with 'pflotran'.
     if (len(trim(pflotran_prefix)) > 1) then
-      model%driver%input_prefix = trim(pflotran_prefix)
+      driver%input_prefix = trim(pflotran_prefix)
 
       if (len(trim(pflotran_inputdir)) > 1) then
-        model%driver%input_prefix = trim(pflotran_inputdir) // '/' // trim(pflotran_prefix)
+        driver%input_prefix = trim(pflotran_inputdir) // '/' // trim(pflotran_prefix)
       else
-        model%driver%input_prefix = trim(pflotran_prefix)
+        driver%input_prefix = trim(pflotran_prefix)
       endif
 
-      model%driver%input_filename = trim(model%driver%input_prefix) // '.in'
-      model%driver%global_prefix = trim(model%driver%input_prefix)
+      driver%input_filename = trim(driver%input_prefix) // '.in'
+      driver%global_prefix = trim(driver%input_prefix)
     else
-      call model%driver%PrintErrMsg('Must provide the pflotran input file prefix.')
+      model%option%io_buffer = 'The external driver must provide the ' // &
+           'pflotran input file prefix.'
+      !call printErrMsg(model%option)
+      call driver%PrintErrMsg('Must provide the pflotran input file prefix.')
     end if
+    write(*,*) 'Input filename: ', driver%input_filename
+    write(*,*) 'Input prefix: ', driver%input_prefix
 
-! #ifdef DEBUG_ELMPFEH
-!     write(*,*) '[YX DEBUG][pflotran_elm_main][Rank=', option%myrank,'] pflotran_inputdir=',pflotran_inputdir
-!     write(*,*) '[YX DEBUG][pflotran_elm_main][Rank=', option%myrank,'] pflotran_prefix=',pflotran_prefix
-!     write(*,*) '[YX DEBUG][pflotran_elm_main][Rank=', option%myrank,'] Input filename: ', model%driver%input_filename
-!     write(*,*) '[YX DEBUG][pflotran_elm_main][Rank=', option%myrank,'] Input prefix: ', model%driver%input_prefix
-! #endif
-
-    !call FactoryPFLOTRANInitialize(driver, model%simulation) ![yx 2024-04-05]
-    model%driver%global_prefix = model%driver%input_prefix
-    call HDF5Init()
-    call EOSInit()
-    call LoggingCreate()![yx 2024-04-12] MPI?
-    !call OptionDestroy(option)![yx 2024-04-15] to remove; currently, it's used later
-
-    model%simulation => FactoryPFLOTRANCreateSimulation(model%driver)
-! #ifdef DEBUG_ELMPFEH
-!     write(*,*) '[YX DEBUG][pflotran_elm_main::pflotranModelCreate][Rank=', model%driver%comm%rank,'] FactoryPFLOTRANCreateSimulation() completed'
-!     write(*,*) '[YX DEBUG][pflotran_elm_main::pflotranModelCreate] model%option%myrank', model%option%myrank
-!     !stop
-! #endif
-
-    ![yx 2024-04-11] - to be DEPRECATED
     ! call OptionInitPetsc(model%option)
     ! if (model%option%myrank == model%option%comm%io_rank .and. &
     !     model%option%driver%print_flags%print_to_screen) then
@@ -211,6 +204,12 @@ contains
     ! model%pause_time_1 = -1.0d0
     ! model%pause_time_2 = -1.0d0
 
+    call HDF5Init()
+    call EOSInit() ! must be called only once from this location
+    call LoggingCreate()
+    call OptionDestroy(option)
+
+    model%simulation => FactoryPFLOTRANCreateSimulation(driver)
   end subroutine pflotranModelCreate
 
 ! ************************************************************************** !

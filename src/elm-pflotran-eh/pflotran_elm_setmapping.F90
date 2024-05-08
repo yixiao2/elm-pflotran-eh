@@ -88,7 +88,10 @@ contains
 
     character(len=MAXSTRINGLENGTH) :: string
     character(len=MAXWORDLENGTH) :: word
-
+! #ifdef DEBUG_ELMPFEH
+!   write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelSetupMappingFiles][Rank=', model%driver%comm%rank,'] debug start'
+!   !stop
+! #endif
     !nullify(model%pf_cells)
     !nullify(model%elm_cells)
     nullify(model%map_elm_sub_to_pf_sub)
@@ -103,8 +106,11 @@ contains
     model%ngelm = -1
 
     input => InputCreate(IUNIT_TEMP, &
-                    model%option%input_filename, model%option)
-
+                    model%driver%input_filename, model%option)
+!#ifdef DEBUG_ELMPFEH
+  !write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelSetupMappingFiles][Rank=', model%driver%comm%rank,'] debug stop'
+  !stop
+!#endif
     ! Read names of mapping file
     elm2pf_3dsub_file=PETSC_FALSE
     pf2elm_3dsub_file=PETSC_FALSE
@@ -115,23 +121,32 @@ contains
     
     string = "MAPPING_FILES"
     call InputFindStringInFile(input,model%option,string)
-
+! #ifdef DEBUG_ELMPFEH
+!   write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelSetupMappingFiles][Rank=', model%driver%comm%rank,'] debug stop1'
+!   write(*,*) '    input%filename=', input%filename
+!   write(*,*) '    model%option%print_flags=', model%option%print_flags
+!   !stop
+! #endif
     do
       call InputReadPflotranString(input, model%option)
       if (InputCheckExit(input, model%option)) exit
-      if (input%ierr /= 0) exit
+      !if (input%ierr /= 0) exit
 
       call InputReadWord(input, model%option, word, PETSC_TRUE)
       call InputErrorMsg(input, model%option, 'keyword', 'MAPPING_FILES')
       call StringToUpper(word)
-
+! #ifdef DEBUG_ELMPFEH
+!   write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelSetupMappingFiles][Rank=', model%driver%comm%rank,'] debug stop2'
+!   write(*,*) '    word=', word
+!   !stop
+! #endif
       select case(trim(word))
         case('ELM2PF_SUB_FILE')
           model%map_elm_sub_to_pf_sub => MappingCreate()
           call InputReadNChars(input, model%option, model%map_elm_sub_to_pf_sub%filename, &
                MAXSTRINGLENGTH, PETSC_TRUE)
           model%map_elm_sub_to_pf_sub%filename = &
-            trim(model%map_elm_sub_to_pf_sub%filename)//CHAR(0)
+            trim(model%map_elm_sub_to_pf_sub%filename)!//CHAR(0)
           model%map_elm_sub_to_pf_sub%id = ELM_3DSUB_TO_PF_3DSUB
           call InputErrorMsg(input, &
                              model%option, 'type', 'MAPPING_FILES')   
@@ -141,7 +156,7 @@ contains
           call InputReadNChars(input, model%option, model%map_pf_sub_to_elm_sub%filename, &
                MAXSTRINGLENGTH, PETSC_TRUE)
           model%map_pf_sub_to_elm_sub%filename = &
-            trim(model%map_pf_sub_to_elm_sub%filename)//CHAR(0)
+            trim(model%map_pf_sub_to_elm_sub%filename)!//CHAR(0)
           model%map_pf_sub_to_elm_sub%id = PF_3DSUB_TO_ELM_3DSUB
           call InputErrorMsg(input, &
                              model%option, 'type', 'MAPPING_FILES')
@@ -195,7 +210,14 @@ contains
 
     enddo
     call InputDestroy(input)
-
+! #ifdef DEBUG_ELMPFEH
+!   write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelSetupMappingFiles][Rank=', model%driver%comm%rank,'] debug stop'
+!   write(*,*) '    elm2pf_3dsub_file=', elm2pf_3dsub_file
+!   write(*,*) '    pf2elm_3dsub_file=', pf2elm_3dsub_file
+!   write(*,*) '    associated(model%map_elm_sub_to_pf_sub)=', associated(model%map_elm_sub_to_pf_sub)
+!   write(*,*) '    associated(model%map_pf_sub_to_elm_sub)=', associated(model%map_pf_sub_to_elm_sub)
+!   !stop
+! #endif
     if ((.not. elm2pf_3dsub_file) .and. &
         (.not. pf2elm_3dsub_file) ) then
       model%option%io_buffer='One of the 3D soil-mesh mapping files not found - So,' // &
@@ -214,45 +236,49 @@ contains
 
     endif
     
-    if(model%option%iflowmode==TH_MODE) then
-      if(.not.elm2pf_bctop_file .and. .not.pf2elm_bctop_file) then
-         model%option%io_buffer='Running in TH_MODE ' // &
-          ' without pair of top-cell mesh mapping files - SO, ' // &
-          ' ELM grids conversion to PF structured-cartesian grid USED!'
-        call printMsg(model%option)
+    ! [yx debug][TH MODE][2024-04-15]
+    ! if(model%option%iflowmode==TH_MODE) then
+    !   if(.not.elm2pf_bctop_file .and. .not.pf2elm_bctop_file) then
+    !      model%option%io_buffer='Running in TH_MODE ' // &
+    !       ' without pair of top-cell mesh mapping files - SO, ' // &
+    !       ' ELM grids conversion to PF structured-cartesian grid USED!'
+    !     call printMsg(model%option)
 
-        if(.not.associated(model%map_elm_2dtop_to_pf_2dtop)) then
-          model%map_elm_2dtop_to_pf_2dtop => MappingCreate()
-          model%map_elm_2dtop_to_pf_2dtop%id = ELM_2DTOP_TO_PF_2DTOP
-        endif
+    !     if(.not.associated(model%map_elm_2dtop_to_pf_2dtop)) then
+    !       model%map_elm_2dtop_to_pf_2dtop => MappingCreate()
+    !       model%map_elm_2dtop_to_pf_2dtop%id = ELM_2DTOP_TO_PF_2DTOP
+    !     endif
 
-        if(.not.associated(model%map_pf_2dtop_to_elm_2dtop)) then
-          model%map_pf_2dtop_to_elm_2dtop => MappingCreate()
-          model%map_pf_2dtop_to_elm_2dtop%id = PF_2DTOP_TO_ELM_2DTOP
-        endif
+    !     if(.not.associated(model%map_pf_2dtop_to_elm_2dtop)) then
+    !       model%map_pf_2dtop_to_elm_2dtop => MappingCreate()
+    !       model%map_pf_2dtop_to_elm_2dtop%id = PF_2DTOP_TO_ELM_2DTOP
+    !     endif
 
-      endif
+    !   endif
 
-      if(.not.elm2pf_bcbot_file .and. .not.pf2elm_bcbot_file) then
-        model%option%io_buffer='Running in TH_MODE ' // &
-          ' without pair of bottom-cell mesh mapping files - SO, ' // &
-          ' ELM grids conversion to PF structured-cartesian grid USED!'
-        call printMsg(model%option)
+    !   if(.not.elm2pf_bcbot_file .and. .not.pf2elm_bcbot_file) then
+    !     model%option%io_buffer='Running in TH_MODE ' // &
+    !       ' without pair of bottom-cell mesh mapping files - SO, ' // &
+    !       ' ELM grids conversion to PF structured-cartesian grid USED!'
+    !     call printMsg(model%option)
 
-        if(.not.associated(model%map_elm_2dbot_to_pf_2dbot)) then
-          model%map_elm_2dbot_to_pf_2dbot => MappingCreate()
-          model%map_elm_2dbot_to_pf_2dbot%id = ELM_2DBOT_TO_PF_2DBOT
-        endif
+    !     if(.not.associated(model%map_elm_2dbot_to_pf_2dbot)) then
+    !       model%map_elm_2dbot_to_pf_2dbot => MappingCreate()
+    !       model%map_elm_2dbot_to_pf_2dbot%id = ELM_2DBOT_TO_PF_2DBOT
+    !     endif
 
-        if(.not.associated(model%map_pf_2dbot_to_elm_2dbot)) then
-          model%map_pf_2dbot_to_elm_2dbot => MappingCreate()
-          model%map_pf_2dbot_to_elm_2dbot%id = PF_2DBOT_TO_ELM_2DBOT
-        endif
+    !     if(.not.associated(model%map_pf_2dbot_to_elm_2dbot)) then
+    !       model%map_pf_2dbot_to_elm_2dbot => MappingCreate()
+    !       model%map_pf_2dbot_to_elm_2dbot%id = PF_2DBOT_TO_ELM_2DBOT
+    !     endif
 
-      endif
+    !   endif
 
-    endif
-
+    ! endif
+! #ifdef DEBUG_ELMPFEH
+!   write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelSetupMappingFiles][Rank=', model%driver%comm%rank,'] debug this function end'
+!   !stop
+! #endif
   end subroutine pflotranModelSetupMappingFiles
 
 ! ************************************************************************** !
@@ -387,10 +413,10 @@ contains
 
     if (len(trim(map%filename)) > 0) then
       ! Read mapping file
-      if (index(map%filename, '.txt') > 0) then
+      if (index(map%filename, '.txt') > 0 .or. index(map%filename, '.meshmap') > 0) then
         call MappingReadTxtFile(map, map%filename, option)
       else
-        option%io_buffer = 'Invalid mapping file name (must be in *.txt) between ELM and PFLOTRAN!'
+        option%io_buffer = 'Invalid mapping file name (must be in *.txt or *.meshmap) between ELM and PFLOTRAN!'
         call printErrMsg(option)
       endif
 
@@ -400,15 +426,16 @@ contains
         call printErrMsg(option)
       end if
 
-    elseif(.not.option%mapping_files) then
-      ! directly mapping between ELM and PF meshes, if no user-defined mapping file
-      map%pflotran_nlev_mapped = grid%structured_grid%nz
-      map%elm_nlev_mapped = elm_pf_idata%nzelm_mapped
-      if (dest_mesh_id == PF_3DSUB_MESH) then
-        call MappingFromELMGrids(map, grid, PETSC_TRUE, option)
-      elseif(dest_mesh_id == ELM_3DSUB_MESH) then
-        call MappingFromELMGrids(map, grid, PETSC_FALSE, option)
-      endif
+    ![yx debug][2024-04-16] if no MAPPING_FILES in pflotran.in, and COLUMN_MODE is on.
+    ! elseif(.not.option%mapping_files) then
+    !   ! directly mapping between ELM and PF meshes, if no user-defined mapping file
+    !   map%pflotran_nlev_mapped = grid%structured_grid%nz
+    !   map%elm_nlev_mapped = elm_pf_idata%nzelm_mapped
+    !   if (dest_mesh_id == PF_3DSUB_MESH) then
+    !     call MappingFromELMGrids(map, grid, PETSC_TRUE, option)
+    !   elseif(dest_mesh_id == ELM_3DSUB_MESH) then
+    !     call MappingFromELMGrids(map, grid, PETSC_FALSE, option)
+    !   endif
 
     else
 
@@ -416,7 +443,10 @@ contains
         call printErrMsg(option)
 
     endif
-
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] finish MappingReadTxtFile'
+      !stop
+#endif
     grid_elm_npts_ghost=0
     ! Allocate memory to identify if ELM cells are local or ghosted.
     ! Note: Presently all ELM cells are local
@@ -445,31 +475,46 @@ contains
     enddo
 
 #else
-    ! fully 3-D
-    grid_pf_npts_ghost = grid%ngmax - grid%nlmax
+    ! ! fully 3-D
+    ! grid_pf_npts_ghost = grid%ngmax - grid%nlmax
 
-    allocate(grid_pf_cell_ids_nindex(grid%ngmax))
-    allocate(grid_pf_local_nindex(grid%ngmax))
-    allocate(grid_pf_ghosted_nindex(grid%ngmax))
-    do ghosted_id = 1, grid%ngmax
-      local_id = grid%nG2L(ghosted_id)
-      grid_pf_cell_ids_nindex(ghosted_id) = grid%nG2A(ghosted_id)-1
-      if (local_id <= 0) then
-        grid_pf_local_nindex(ghosted_id) = 0               ! GHOST cell
-      else
-        grid_pf_local_nindex(ghosted_id) = local_id        ! LOCAL ID
-      endif
-      grid_pf_ghosted_nindex(ghosted_id) = ghosted_id
-    enddo
+    ! allocate(grid_pf_cell_ids_nindex(grid%ngmax))
+    ! allocate(grid_pf_local_nindex(grid%ngmax))
+    ! allocate(grid_pf_ghosted_nindex(grid%ngmax))
+    ! do ghosted_id = 1, grid%ngmax
+    !   local_id = grid%nG2L(ghosted_id)
+    !   grid_pf_cell_ids_nindex(ghosted_id) = grid%nG2A(ghosted_id)-1
+    !   if (local_id <= 0) then
+    !     grid_pf_local_nindex(ghosted_id) = 0               ! GHOST cell
+    !   else
+    !     grid_pf_local_nindex(ghosted_id) = local_id        ! LOCAL ID
+    !   endif
+    !   grid_pf_ghosted_nindex(ghosted_id) = ghosted_id
+    ! enddo
 #endif
 
     select case(source_mesh_id)
       case(ELM_3DSUB_MESH)
+#ifdef DEBUG_ELMPFEH
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] start MappingSetSourceMeshCellIds'
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_elm_npts_local=', grid_elm_npts_local
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_elm_npts_ghost=', grid_elm_npts_ghost
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_elm_cell_ids_nindex=', grid_elm_cell_ids_nindex
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_elm_local_nindex=', grid_elm_local_nindex
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_elm_ghosted_nindex=', grid_elm_ghosted_nindex
+#endif
         call MappingSetSourceMeshCellIds(map, option, grid_elm_npts_local, &
                                          grid_elm_npts_ghost,      &
                                          grid_elm_cell_ids_nindex, &
                                          grid_elm_local_nindex,    &
                                          grid_elm_ghosted_nindex)
+#ifdef DEBUG_ELMPFEH
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] start MappingSetDestinationMeshCellIds'
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_pf_npts_local=', grid_pf_npts_local
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_pf_npts_ghost=', grid_pf_npts_ghost
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_pf_cell_ids_nindex=', grid_pf_cell_ids_nindex
+  write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] grid_pf_local_nindex=', grid_pf_local_nindex
+#endif
         call MappingSetDestinationMeshCellIds(map, option, grid_pf_npts_local, &
                                               grid_pf_npts_ghost,      &
                                               grid_pf_cell_ids_nindex, &
@@ -488,11 +533,30 @@ contains
         option%io_buffer = 'Invalid argument source_mesh_id passed to pflotranModelInitMapping'
         call printErrMsg(option)
     end select
-
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] FLAG: pass setsourcemeshcellids and setdestinationmeshcellids'
+      !stop
+#endif
     call MappingDecompose(map, option)
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] FLAG: pass MappingDecompose'
+      !stop
+#endif
     call MappingFindDistinctSourceMeshCellIds(map, option)
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] FLAG: pass MappingFindDistinctSourceMeshCellIds'
+      !stop
+#endif
     call MappingCreateWeightMatrix(map, option)
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] FLAG: pass MappingCreateWeightMatrix'
+      !stop
+#endif
     call MappingCreateScatterOfSourceMesh(map, option)
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] FLAG: pass MappingCreateScatterOfSourceMesh'
+      !stop
+#endif
     call MappingFreeNotNeeded(map)
 
     deallocate(grid_pf_cell_ids_nindex)
@@ -500,7 +564,10 @@ contains
     deallocate(grid_pf_ghosted_nindex)
     deallocate(grid_elm_local_nindex)
     deallocate(grid_elm_ghosted_nindex)
-
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] FLAG: complete FreeNotNeeded'
+      !stop
+#endif
     ! Setting the number of cells constituting the 3D
     ! subsurface domain for each model.
     ! NOTE: no need for ELM's cell numbers, which have already set in elm_interface.
@@ -515,7 +582,10 @@ contains
                         'pflotranModelInitMappingSubToSub'
         call printErrMsg(option)
     end select
-
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][pflotran_elm_setmapping::pflotranModelInitMappingSub2Sub] FLAG: complete pflotranModelInitMappingSub2Sub'
+      !stop
+#endif
   end subroutine pflotranModelInitMappingSub2Sub
 
 ! ************************************************************************** !
@@ -757,15 +827,15 @@ contains
         !
       endif
 
-    elseif(.not.option%mapping_files) then
-      ! directly mapping between ELM and PF meshes, if no user-defined mapping file
-      map%pflotran_nlev_mapped = grid%structured_grid%nz
-      map%elm_nlev_mapped = elm_pf_idata%nzelm_mapped
-      if (dest_mesh_id == PF_FACE_MESH) then
-        call MappingFromELMGrids(map, grid, PETSC_TRUE, option)
-      elseif(dest_mesh_id == ELM_FACE_MESH) then
-        call MappingFromELMGrids(map, grid, PETSC_FALSE, option)
-      endif
+    ! elseif(.not.option%mapping_files) then
+    !   ! directly mapping between ELM and PF meshes, if no user-defined mapping file
+    !   map%pflotran_nlev_mapped = grid%structured_grid%nz
+    !   map%elm_nlev_mapped = elm_pf_idata%nzelm_mapped
+    !   if (dest_mesh_id == PF_FACE_MESH) then
+    !     call MappingFromELMGrids(map, grid, PETSC_TRUE, option)
+    !   elseif(dest_mesh_id == ELM_FACE_MESH) then
+    !     call MappingFromELMGrids(map, grid, PETSC_FALSE, option)
+    !   endif
 
     else
 

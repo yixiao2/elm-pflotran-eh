@@ -69,6 +69,14 @@ ifdef column_mode
   MYFLAGS += ${FC_DEFINE_FLAG}COLUMN_MODE
 endif
 
+ifdef debug_elmpfeh
+  MYFLAGS += ${FC_DEFINE_FLAG}DEBUG_ELMPFEH
+endif
+
+ifdef map_debug
+  MYFLAGS += ${FC_DEFINE_FLAG}MAP_DEBUG
+endif
+
 # calculate the jacobians for tracking variables if coupled with ELM-CN
 ifdef nojacboian_track_vars
   MYFLAGS += ${FC_DEFINE_FLAG}nojacobian_track_vars
@@ -110,6 +118,10 @@ endif
 ifdef have_hdf5
   MYFLAGS += -I$(HDF5_INCLUDE) -I$(HDF5_LIB) ${FC_DEFINE_FLAG}PETSC_HAVE_HDF5
 endif
+
+$(info HDF5_INCLUDE is $(HDF5_INCLUDE))
+$(info HDF5_LIB is $(HDF5_LIB))
+$(info FC_DEFINE_FLAG is $(FC_DEFINE_FLAG))
 
 ifdef ugrid_debug
   MYFLAGS += ${FC_DEFINE_FLAG}UGRID_DEBUG

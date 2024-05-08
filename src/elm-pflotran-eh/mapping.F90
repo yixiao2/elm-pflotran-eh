@@ -13,6 +13,7 @@ module Mapping_module
   use petscsys
   use petscvec
   use petscmat
+  use petscis
   use Utility_module, only : where_checkerr
 
   use PFLOTRAN_Constants_module
@@ -480,7 +481,7 @@ contains
     PetscMPIInt                     :: status_mpi(MPI_STATUS_SIZE)
     PetscErrorCode                  :: ierr
 
-    card     = 'MppingReadTxtFile'
+    card     = 'MappingReadTxtFile'
 
     ! Read ASCII file through io_rank and communicate to other ranks
     if(option%myrank == option%comm%io_rank) then
@@ -531,7 +532,14 @@ contains
       
       nwts_tmp = nwts/option%comm%size
       remainder= nwts - nwts_tmp*option%comm%size
-      
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] reading meshmap'
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] nwts = ',nwts
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] option%comm%size = ',option%comm%size
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] nwts_tmp = ',nwts_tmp
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] remainder = ',remainder
+      !stop
+#endif
       allocate(wts_row_tmp(nwts_tmp + 1))
       allocate(wts_col_tmp(nwts_tmp + 1))
       allocate(wts_tmp(    nwts_tmp + 1))
@@ -540,7 +548,7 @@ contains
         
         ! Determine the number of row to be read
         nread = nwts_tmp
-        if(irank<remainder) nread = nread+1
+        if(irank<remainder) nread = nread+1 ![YX 20240430] for first "remainder" ranks, read nwts_tmp+1 rows
         
         ! Read the data
         do ii = 1,nread
@@ -581,7 +589,13 @@ contains
           wts_col_tmp(ii) = wts_col_tmp(ii) - 1
           
         enddo
-        
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] cal wts_row/col_tmp and wts_tmp'
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] wts_row_tmp = ',wts_row_tmp
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] wts_col_tmp = ',wts_col_tmp
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] wts_tmp = ',wts_tmp
+      !stop
+#endif
         ! Save data locally
         if (irank == option%myrank) then
           
@@ -616,7 +630,10 @@ contains
       deallocate(wts_col_tmp)
       deallocate(wts_tmp)
       call InputDestroy(input)
-      
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] data sent to other ranks'
+      !stop
+#endif
     else
       ! Other ranks receive data from io_rank
       
@@ -637,7 +654,10 @@ contains
                     option%mycomm,status_mpi,ierr)
                     
     endif
-
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] data received by other ranks'
+      !stop
+#endif
     ! Broadcast from root information regarding ELM/PFLOTRAN num soil layers
     temp_int_array(1) = map%elm_nlevsoi
     temp_int_array(2) = map%elm_nlevgrnd
@@ -653,7 +673,10 @@ contains
     map%elm_nlev_mapped = temp_int_array(3)
     map%pflotran_nlev = temp_int_array(4)
     map%pflotran_nlev_mapped = temp_int_array(5)
-
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][mapping::MappingReadTxtFile] Completed. root information broadcasted to all ranks'
+      !stop
+#endif
   end subroutine MappingReadTxtFile
 
 ! ************************************************************************** !
@@ -835,7 +858,14 @@ contains
     call VecRestoreArrayF90(row_vec,vloc1,ierr)
     call VecRestoreArrayF90(col_vec,vloc2,ierr)
     call VecRestoreArrayF90(wts_vec,vloc3,ierr)
-
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][mapping::MappingDecompose] debug processor rank = ',option%myrank
+      write(*,*) '[YX DEBUG][mapping::MappingDecompose] map%s2d_nwts = ',map%s2d_nwts
+      write(*,*) '[YX DEBUG][mapping::MappingDecompose] map%s2d_icsr = ',map%s2d_icsr
+      write(*,*) '[YX DEBUG][mapping::MappingDecompose] map%s2d_jcsr = ',map%s2d_jcsr
+      write(*,*) '[YX DEBUG][mapping::MappingDecompose] map%s2d_wts = ',map%s2d_wts
+      !stop
+#endif
     ! 1) For each cell of destination mesh, find the number of source mesh cells
     !    overlapped.
     !                             OR
@@ -897,11 +927,16 @@ contains
     cumsum_start = 0
     call MPI_Exscan(INT(vloc2(map%d_ncells_loc)),cumsum_start,ONE_INTEGER_MPI, &
                     MPIU_INTEGER,MPI_SUM,option%mycomm,ierr)
-
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][mapping::MappingDecompose] debug processor rank = ',option%myrank
+      write(*,*) '[YX DEBUG][mapping::MappingDecompose] INT(vloc2(map%d_ncells_loc)) = ',INT(vloc2(map%d_ncells_loc))
+      write(*,*) '[YX DEBUG][mapping::MappingDecompose] cumsum_start = ',cumsum_start
+      !stop
+#endif
     do ii = 1,map%d_ncells_loc
       vloc2(ii) = vloc2(ii) + cumsum_start
     enddo
-    
+
     call VecRestoreArrayF90(nonzero_row_count_vec,vloc1,ierr)
     call VecRestoreArrayF90(cumsum_nonzero_row_count_vec,vloc2,ierr)
 
@@ -1003,7 +1038,12 @@ contains
     
     call VecGetArrayF90(nonzero_row_count_loc_vec,vloc1,ierr)
     call VecGetArrayF90(cumsum_nonzero_row_count_loc_vec,vloc2,ierr)
-    
+#ifdef DEBUG_ELMPFEH
+    write(*,*) '[YX DEBUG][mapping::MappingDecompose] debug processor rank = ',option%myrank
+    write(*,*) '[YX DEBUG][mapping::MappingDecompose] vloc1 = ',vloc1
+    write(*,*) '[YX DEBUG][mapping::MappingDecompose] vloc2 = ',vloc2
+    !stop
+#endif
     allocate(map%s2d_nonzero_rcount_csr(map%d_ncells_ghd))
     
     ! For each destination, save the number of overlapped source cells
@@ -1089,7 +1129,12 @@ contains
     ! Attach to the local copy of the scatterd data
     call VecGetArrayF90(col_loc_vec,vloc3,ierr)
     call VecGetArrayF90(wts_loc_vec,vloc4,ierr)
-
+#ifdef DEBUG_ELMPFEH
+    write(*,*) '[YX DEBUG][mapping::MappingDecompose] debug processor rank = ',option%myrank
+    write(*,*) '[YX DEBUG][mapping::MappingDecompose] vloc3 = ',vloc3
+    write(*,*) '[YX DEBUG][mapping::MappingDecompose] vloc4 = ',vloc4
+    !stop
+#endif
     ! Save the scattered data
     do ii = 1,map%s2d_s_ncells
        map%s2d_s_ids_nidx(ii) = INT(vloc3(ii))
@@ -1545,8 +1590,45 @@ contains
     call ISCreateBlock(option%mycomm, 1, map%s2d_s_ncells_dis, INT(v_loc),&
          PETSC_COPY_VALUES, is_from, ierr)
     call VecRestoreArrayF90(pindex_req,v_loc,ierr)
+#ifdef MAP_DEBUG
+    !yx debug
+    write(string,*) map%id
+    string = 'map' // trim(adjustl(string)) // '_pindex_req_yx.out'
+    call PetscViewerASCIIOpen(option%mycomm, trim(string), viewer, ierr)
+    call VecView(pindex_req,viewer,ierr)
+    call PetscViewerDestroy(viewer,ierr)
 
-    call VecScatterCreate(N2P, is_from, pindex_req, is_to, map%s2d_scat_s_gb2disloc, ierr)
+    write(string,*) map%id
+    string = 'map' // trim(adjustl(string)) // '_N2P_yx.out'
+    call PetscViewerASCIIOpen(option%mycomm, trim(string), viewer, ierr)
+    call VecView(N2P,viewer,ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    write(string,*) map%id
+    string = 'map' // trim(adjustl(string)) // '_is_from_yx.out'
+    call PetscViewerASCIIOpen(option%mycomm, trim(string), viewer, ierr)
+    call ISView(is_from, viewer,ierr)
+    call PetscViewerDestroy(viewer, ierr)
+
+    ! is_to is null
+
+    write(*,*) '[YX DEBUG][mapping::MappingCreateScatterOfSourceMesh] FLAG: before vscat_yx.out'
+
+    write(string,*) map%id
+    string = 'map' // trim(adjustl(string)) // '_vscat_yx.out'
+    call PetscViewerASCIIOpen(option%mycomm, trim(string), viewer, ierr)
+    call VecScatterView(vscat,viewer,ierr)
+    call PetscViewerDestroy(viewer,ierr)
+
+    write(*,*) '[YX DEBUG][mapping::MappingCreateScatterOfSourceMesh] FLAG: before VecScatterCreate'
+    call VecScatterDestroy(vscat,ierr)
+#endif
+    !call VecScatterCreate(N2P, is_from, pindex_req, is_to, map%s2d_scat_s_gb2disloc, ierr)
+    call VecScatterCreate(N2P, is_from, pindex_req, PETSC_NULL_IS, map%s2d_scat_s_gb2disloc, ierr)
+#ifdef DEBUG_ELMPFEH
+      write(*,*) '[YX DEBUG][mapping::MappingCreateScatterOfSourceMesh] FLAG: VecScatterCreate'
+      !stop
+#endif
 #ifdef MAP_DEBUG
     write(string,*) map%id
     string = 'map' // trim(adjustl(string)) // '_s2d_scat_s_gb2disloc.out'

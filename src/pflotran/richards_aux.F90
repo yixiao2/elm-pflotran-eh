@@ -31,7 +31,7 @@ module Richards_Aux_module
     PetscReal :: dkvr_dp
     PetscReal :: dsat_dp
     PetscReal :: dden_dp
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
     PetscReal :: bc_alpha  ! Brooks Corey parameterization: alpha
     PetscReal :: bc_lambda ! Brooks Corey parameterization: lambda
 #endif
@@ -136,7 +136,7 @@ subroutine RichardsAuxVarInit(auxvar,option)
   auxvar%dpres_dtime = 0.d0
   auxvar%dmass_dtime = 0.0d0
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
   auxvar%bc_alpha  = 0.0d0
   auxvar%bc_lambda  = 0.0d0
 #endif
@@ -175,7 +175,7 @@ subroutine RichardsAuxVarCopy(auxvar,auxvar2,option)
   auxvar2%dpres_dtime = auxvar%dpres_dtime
   auxvar2%dmass_dtime = auxvar%dmass_dtime
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
   auxvar2%bc_alpha  = auxvar%bc_alpha
   auxvar2%bc_lambda = auxvar%bc_lambda
 #endif
@@ -253,7 +253,7 @@ subroutine RichardsAuxVarCompute(x,auxvar,global_auxvar,material_auxvar, &
   dkr_dp = 0.d0
 
   if (auxvar%pc > 0.d0) then
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
     if (auxvar%bc_alpha > 0.d0) then
       select type(sf => characteristic_curves%saturation_function)
         class is(sat_func_VG_type)

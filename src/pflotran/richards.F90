@@ -15,7 +15,7 @@ module Richards_module
   use PFLOTRAN_Constants_module
   use Utility_module, only : Equal
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
   use clm_pflotran_interface_data
 #endif
   implicit none
@@ -1764,7 +1764,7 @@ subroutine RichardsResidualSourceSink(r,realization,ierr)
   PetscInt :: istart
   PetscInt :: iconn
   PetscInt :: sum_connection
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
   PetscReal, pointer :: qflx_pf_p(:)
 #endif
   PetscReal :: qsrc, qsrc_mol
@@ -1793,7 +1793,7 @@ subroutine RichardsResidualSourceSink(r,realization,ierr)
 
   ! now assign access pointer to local variables
   call VecGetArrayF90(r,r_p,ierr);CHKERRQ(ierr)
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
   call VecGetArrayF90(clm_pf_idata%qflx_pf,qflx_pf_p,ierr);CHKERRQ(ierr)
 #endif
 
@@ -1811,7 +1811,7 @@ subroutine RichardsResidualSourceSink(r,realization,ierr)
       ghosted_id = grid%nL2G(local_id)
       if (patch%imat(ghosted_id) <= 0) cycle
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
       qsrc = qflx_pf_p(local_id)
 #endif
       if (source_sink%flow_condition%itype(1)/=HET_VOL_RATE_SS .and. &
@@ -1911,7 +1911,7 @@ subroutine RichardsResidualSourceSink(r,realization,ierr)
   call RichardsSSSandbox(r,null_mat,PETSC_FALSE,grid,material_auxvars, &
                          global_auxvars,rich_auxvars,option)
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
   call VecRestoreArrayF90(clm_pf_idata%qflx_pf,qflx_pf_p,ierr);CHKERRQ(ierr)
 #endif
 

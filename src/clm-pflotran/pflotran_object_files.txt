@@ -1,9 +1,9 @@
 # this file contains all object files except pflotran.o, pflotran_rxn.o, etc.
 
-# DO NOT place any object files that depend on the discretization within
+# DO NOT place any object files that depend on the discretization within 
 # util_obj
 util_obj = \
-	${common_src}communicator_aux.o \
+  ${common_src}communicator_aux.o \
 	${common_src}driver.o \
 	${common_src}generic.o \
 	${common_src}input_aux.o \
@@ -30,14 +30,14 @@ util_obj = \
 deriv_obj = \
 	${common_src}general_derivative.o
 
-# DO NOT place any object files that depend on the discretization within
+# DO NOT place any object files that depend on the discretization within 
 # util_obj
 eos_obj = \
 	${common_src}co2_sw.o \
 	${common_src}co2_span_wagner_spline.o \
 	${common_src}eos.o \
 	${common_src}eos_gas.o \
-	${common_src}gas_eos_mod.o
+	${common_src}gas_eos_mod.o 
 
 mode_aux_obj = \
 	${common_src}auxiliary.o \
@@ -45,7 +45,7 @@ mode_aux_obj = \
 	${common_src}hydrate_aux.o \
 	${common_src}wipp_flow_aux.o \
 	${common_src}mphase_aux.o \
-	${common_src}kdtree.o \
+  ${common_src}kdtree.o \
 	${common_src}pnf_aux.o \
 	${common_src}richards_aux.o \
 	${common_src}th_aux.o \
@@ -87,7 +87,7 @@ mode_obj = \
 	${common_src}wipp_flow_common.o \
 	${common_src}global.o \
 	${common_src}mphase.o \
-	${common_src}nw_transport.o \
+  ${common_src}nw_transport.o \
 	${common_src}nw_transport_equilibrium.o \
 	${common_src}pnf.o \
 	${common_src}reactive_transport.o \
@@ -98,7 +98,7 @@ mode_obj = \
 	${common_src}zflow_common.o \
 	${common_src}inlinesurface.o
 
-# DO NOT place any object files that depend on the discretization within
+# DO NOT place any object files that depend on the discretization within 
 # util_obj
 shared_mode_aux_obj = \
 	${common_src}co2eos.o \
@@ -111,9 +111,9 @@ shared_mode_aux_obj = \
 	${common_src}lookup_table.o \
 	${common_src}material_aux.o \
 	${common_src}nw_transport_aux.o \
-	${common_src}reactive_transport_aux.o
+	${common_src}reactive_transport_aux.o 
 
-# DO NOT place any object files that depend on the discretization within
+# DO NOT place any object files that depend on the discretization within 
 # util_obj
 chem_obj = \
 	${common_src}reaction_database.o \
@@ -134,16 +134,16 @@ chem_obj = \
 	${common_src}reaction_base.o \
 	${common_src}reaction_aux.o \
 	${common_src}reaction_clm.o \
-	${common_src}reaction_redox.o \
+  ${common_src}reaction_redox.o \
 	${common_src}reaction_sandbox.o \
 	${common_src}reaction_sandbox_base.o \
-	${common_src}reaction_sandbox_biohill.o \
+  ${common_src}reaction_sandbox_biohill.o \
 	${common_src}reaction_sandbox_bioTH.o \
 	${common_src}reaction_sandbox_calcite.o \
 	${common_src}reaction_sandbox_chromium.o \
 	${common_src}reaction_sandbox_clm_cn.o \
 	${common_src}reaction_sandbox_example.o \
-	${common_src}reaction_sandbox_equilibrate.o \
+  ${common_src}reaction_sandbox_equilibrate.o \
 	${common_src}reaction_sandbox_flexbiohill.o \
 	${common_src}reaction_sandbox_gas.o \
 	${common_src}reaction_sandbox_pnnl_cyber.o \
@@ -190,7 +190,7 @@ relations_obj = \
 
 properties_obj = \
 	${common_src}fluid.o \
-	${common_src}material.o
+	${common_src}material.o 
 
 dataset_obj = \
 	${common_src}dataset_ascii.o \
@@ -200,7 +200,7 @@ dataset_obj = \
 	${common_src}dataset_map_hdf5.o \
 	${common_src}dataset.o \
 	${common_src}dataset_gridded_hdf5.o \
-	${common_src}time_storage.o
+	${common_src}time_storage.o 
 
 srcsink_obj = \
 	${common_src}srcsink_sandbox.o \
@@ -212,7 +212,7 @@ srcsink_obj = \
 	${common_src}srcsink_sandbox_wipp_well.o
 
 io_obj = \
-  ${common_src}output_obs_h5.o \
+	${common_src}output_obs_h5.o \
 	${common_src}hdf5.o \
 	${common_src}hdf5_aux.o \
 	${common_src}output.o \
@@ -332,3 +332,10 @@ solver_obj = \
 	${common_src}preconditioner_cpr.o \
 	${common_src}solver.o \
 	${common_src}solver_cpr.o
+
+elmpf_interface_obj = \
+	${common_src}pflotran_interface_main.o \
+	${common_src}pflotran_model.o \
+	${common_src}mapping.o \
+	${common_src}clm_pflotran_interface_data.o
+

@@ -502,7 +502,7 @@ end subroutine pflotranModelSetICs
   !
   ! Converts hydraulic properties from CLM units
   ! into PFLOTRAN units.
-  ! #ifdef CLM_PFLOTRAN
+  ! #ifdef ELM_PFLOTRAN
   !
   ! Author: Gautam Bisht
   ! Date: 10/22/2010

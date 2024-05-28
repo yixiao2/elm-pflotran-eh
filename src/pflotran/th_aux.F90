@@ -57,7 +57,7 @@ module TH_Aux_module
     ! for ice
     type(th_ice_type), pointer :: ice
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
     PetscReal :: bc_alpha  ! Brooks Corey parameterization: alpha
     PetscReal :: bc_lambda ! Brooks Corey parameterization: lambda
 #endif
@@ -256,7 +256,7 @@ subroutine THAuxVarInit(auxvar,option)
     nullify(auxvar%ice)
   endif
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
   auxvar%bc_alpha      = uninit_value
   auxvar%bc_lambda     = uninit_value
 #endif
@@ -335,7 +335,7 @@ subroutine THAuxVarCopy(auxvar,auxvar2,option)
     auxvar2%ice%dmol_gas_dT = auxvar%ice%dmol_gas_dT
   endif
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
   auxvar2%bc_alpha  = auxvar%bc_alpha
   auxvar2%bc_lambda = auxvar%bc_lambda
 #endif
@@ -432,7 +432,7 @@ subroutine THAuxVarComputeNoFreezing(x,auxvar,global_auxvar, &
   if (auxvar%pc > 1.d0) then
      iphase = 3
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
     if (auxvar%bc_alpha > 0.d0) then
       select type(sf => characteristic_curves%saturation_function)
         class is(sat_func_VG_type)
@@ -714,7 +714,7 @@ subroutine THAuxVarComputeFreezing(x, auxvar, global_auxvar, &
 
   call CapillaryPressureThreshold(saturation_function,p_th,option)
 
-#if defined(CLM_PFLOTRAN) || defined(CLM_OFFLINE)
+#if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
     if(auxvar%bc_alpha > 0.d0) then
        saturation_function%alpha  = auxvar%bc_alpha
        saturation_function%lambda = auxvar%bc_lambda

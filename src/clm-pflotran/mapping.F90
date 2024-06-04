@@ -28,7 +28,7 @@ module Mapping_module
     !       s - Source vector      (ns x 1)
     !       d - Destination vector (ns x 1)
     !
-    ! In CLM-PFLOTRAN coupling, s and d vectors are decomposed over multiple processors.
+    ! In ELM-PFLOTRAN coupling, s and d vectors are decomposed over multiple processors.
     ! The decomposition of vectors need not be in a contiguous order.
     !
     ! Each processor perfoms a local matrix-vector product:
@@ -79,9 +79,9 @@ module Mapping_module
                                                     ! component of source vector
 
     ! Header information about number of layers mapped
-    PetscInt           :: clm_nlevsoi               ! Number of CLM nlevsoi
-    PetscInt           :: clm_nlevgrnd              ! Number of CLM nlevgrnd
-    PetscInt           :: clm_nlev_mapped           ! Number of CLM layers mapped
+    PetscInt           :: elm_nlevsoi               ! Number of ELM nlevsoi
+    PetscInt           :: elm_nlevgrnd              ! Number of ELM nlevgrnd
+    PetscInt           :: elm_nlev_mapped           ! Number of ELM layers mapped
     PetscInt           :: pflotran_nlev             ! Number of PFLOTRAN layers
     PetscInt           :: pflotran_nlev_mapped      ! Number of PFLOTRAN layers mapped
 
@@ -159,9 +159,9 @@ contains
     map%s2d_scat_s_gb2disloc = PETSC_NULL_VECSCATTER
     map%s_disloc_vec = PETSC_NULL_VEC
 
-    map%clm_nlevsoi = 0
-    map%clm_nlevgrnd = 0
-    map%clm_nlev_mapped = 0
+    map%elm_nlevsoi = 0
+    map%elm_nlevgrnd = 0
+    map%elm_nlev_mapped = 0
     map%pflotran_nlev = 0
     map%pflotran_nlev_mapped = 0
 
@@ -333,18 +333,18 @@ contains
         call StringToLower(card)
 
         select case (trim(card))
-          case('clm_nlevsoi')
-            hint = 'clm_nlevsoi'
-            call InputReadInt(input,option,map%clm_nlevsoi)
-            call InputErrorMsg(input,option,'CLM nlevsoi',hint)
-          case('clm_nlevgrnd')
-            hint = 'clm_nlevgrnd'
-            call InputReadInt(input,option,map%clm_nlevgrnd)
-            call InputErrorMsg(input,option,'CLM nlevgrnd',hint)
-          case('clm_nlev_mapped')
-            hint = 'clm_nlev_mapped'
-            call InputReadInt(input,option,map%clm_nlev_mapped)
-            call InputErrorMsg(input,option,'CLM nlev mapped',hint)
+          case('elm_nlevsoi')
+            hint = 'elm_nlevsoi'
+            call InputReadInt(input,option,map%elm_nlevsoi)
+            call InputErrorMsg(input,option,'ELM nlevsoi',hint)
+          case('elm_nlevgrnd')
+            hint = 'elm_nlevgrnd'
+            call InputReadInt(input,option,map%elm_nlevgrnd)
+            call InputErrorMsg(input,option,'ELM nlevgrnd',hint)
+          case('elm_nlev_mapped')
+            hint = 'elm_nlev_mapped'
+            call InputReadInt(input,option,map%elm_nlev_mapped)
+            call InputErrorMsg(input,option,'ELM nlev mapped',hint)
           case('pflotran_nlev')
             hint = 'pflotran_nlev'
             call InputReadInt(input,option,map%pflotran_nlev)
@@ -480,10 +480,10 @@ contains
 
     endif
 
-  ! Broadcast from root information regarding CLM/PFLOTRAN num soil layers
-  temp_int_array(1) = map%clm_nlevsoi
-  temp_int_array(2) = map%clm_nlevgrnd
-  temp_int_array(3) = map%clm_nlev_mapped
+  ! Broadcast from root information regarding ELM/PFLOTRAN num soil layers
+  temp_int_array(1) = map%elm_nlevsoi
+  temp_int_array(2) = map%elm_nlevgrnd
+  temp_int_array(3) = map%elm_nlev_mapped
   temp_int_array(4) = map%pflotran_nlev
   temp_int_array(5) = map%pflotran_nlev_mapped
 
@@ -491,9 +491,9 @@ contains
                  option%comm%io_rank,option%mycomm, &
                  ierr);CHKERRQ(ierr)
 
-  map%clm_nlevsoi = temp_int_array(1)
-  map%clm_nlevgrnd = temp_int_array(2)
-  map%clm_nlev_mapped = temp_int_array(3)
+  map%elm_nlevsoi = temp_int_array(1)
+  map%elm_nlevgrnd = temp_int_array(2)
+  map%elm_nlev_mapped = temp_int_array(3)
   map%pflotran_nlev = temp_int_array(4)
   map%pflotran_nlev_mapped = temp_int_array(5)
 

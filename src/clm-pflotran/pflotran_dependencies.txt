@@ -1,6 +1,6 @@
 # pflotran-elm-interface #############################################################
 # NOTE: ahead of common dependencies is only for convenience
-clm_pflotran_interface_data.o :
+elm_pflotran_interface_data.o :
 mapping.o : \
   input_aux.o \
   option.o \
@@ -12,7 +12,7 @@ pflotran_interface_main.o : \
 pflotran_model.o : \
   characteristic_curves.o \
   characteristic_curves_common.o \
-  clm_pflotran_interface_data.o \
+  elm_pflotran_interface_data.o \
   connection.o \
   coupler.o \
   discretization.o \
@@ -51,7 +51,7 @@ pflotran_model.o : \
   variables.o \
   waypoint.o
 richards.o : \
-  clm_pflotran_interface_data.o
+  elm_pflotran_interface_data.o
 # pflotran-elm-interface #############################################################
 
 auxiliary.o : \

@@ -16,7 +16,7 @@ module Richards_module
   use Utility_module, only : Equal
 
 #if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
-  use clm_pflotran_interface_data
+  use elm_pflotran_interface_data
 #endif
   implicit none
 
@@ -1794,7 +1794,7 @@ subroutine RichardsResidualSourceSink(r,realization,ierr)
   ! now assign access pointer to local variables
   call VecGetArrayF90(r,r_p,ierr);CHKERRQ(ierr)
 #if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
-  call VecGetArrayF90(clm_pf_idata%qflx_pf,qflx_pf_p,ierr);CHKERRQ(ierr)
+  call VecGetArrayF90(elm_pf_idata%qflx_pf,qflx_pf_p,ierr);CHKERRQ(ierr)
 #endif
 
   ! Source/sink terms -------------------------------------
@@ -1912,7 +1912,7 @@ subroutine RichardsResidualSourceSink(r,realization,ierr)
                          global_auxvars,rich_auxvars,option)
 
 #if defined(ELM_PFLOTRAN) || defined(ELM_OFFLINE)
-  call VecRestoreArrayF90(clm_pf_idata%qflx_pf,qflx_pf_p,ierr);CHKERRQ(ierr)
+  call VecRestoreArrayF90(elm_pf_idata%qflx_pf,qflx_pf_p,ierr);CHKERRQ(ierr)
 #endif
 
   ! Mass Transfer

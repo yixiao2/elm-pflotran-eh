@@ -337,5 +337,5 @@ elmpf_interface_obj = \
 	${common_src}pflotran_interface_main.o \
 	${common_src}pflotran_model.o \
 	${common_src}mapping.o \
-	${common_src}clm_pflotran_interface_data.o
+	${common_src}elm_pflotran_interface_data.o
 

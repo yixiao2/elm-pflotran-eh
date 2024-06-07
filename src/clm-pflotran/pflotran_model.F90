@@ -352,12 +352,7 @@ contains
       model%option%io_buffer='Running in TH_MODE without a ELM2PF_GFLUX_FILE'
       call PrintErrMsg(model%option)
     endif
-#ifdef DEBUG_ELMPFEH
-  !if (masterproc) then
-     write(*,*) '[YX DEBUG][pflotran_model_module::pflotranModelSetupMappingFiles] subroutine end'
-     stop
-  !endif
-#endif
+
   end subroutine pflotranModelSetupMappingFiles
 
 ! ************************************************************************** !
@@ -730,6 +725,7 @@ end subroutine pflotranModelSetICs
     use elm_pflotran_interface_data
     use Mapping_module
     use Material_module
+    use Material_Aux_module
     use Variables_module, only : POROSITY, PERMEABILITY_X, PERMEABILITY_Y, &
                                PERMEABILITY_Z
     use Saturation_Function_module
@@ -801,7 +797,7 @@ end subroutine pflotranModelSetICs
     call VecDuplicate(field%work_loc,perm_zz_loc,ierr);CHKERRQ(ierr)
 
     call MaterialGetAuxVarVecLoc(realization%patch%aux%Material,porosity_loc, &
-                                 POROSITY,ZERO_INTEGER)
+                                 POROSITY,POROSITY_CURRENT)
     call MaterialGetAuxVarVecLoc(realization%patch%aux%Material,perm_xx_loc, &
                                  PERMEABILITY_X,ZERO_INTEGER)
     call MaterialGetAuxVarVecLoc(realization%patch%aux%Material,perm_yy_loc, &

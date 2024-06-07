@@ -1548,7 +1548,7 @@ contains
                        PETSC_COPY_VALUES,is_to,ierr);CHKERRQ(ierr)
     call VecRestoreArrayF90(pindex_req,v_loc,ierr);CHKERRQ(ierr)
 
-    call VecScatterCreate(N2P,is_to,pindex_req,is_from, &
+    call VecScatterCreate(N2P,is_to,pindex_req,PETSC_NULL_IS, &
                           map%s2d_scat_s_gb2disloc,ierr);CHKERRQ(ierr)
 #ifdef MAP_DEBUG
     call PetscViewerASCIIOpen(mycomm,'s2d_scat_s_gb2disloc.out',viewer, &

@@ -30,6 +30,7 @@ pflotran_model.o : \
   logging.o \
   mapping.o \
   material.o \
+  material_aux.o \
   simulation_multirealization.o \
   option.o \
   patch.o \

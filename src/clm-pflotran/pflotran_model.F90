@@ -1625,10 +1625,14 @@ end subroutine pflotranModelSetICs
     if (OptionIsIORank(model%option)) then
        write(model%option%fid_out, *), '>>>> Inserting waypoint at pause_time = ', pause_time
     endif
-
+#ifdef DEBUG_ELMPFEH
+    write(*,*) '[YX DEBUG][pflotran_model_mod::pflotranModelStepperRunTillPauseTime] pause_time = ', pause_time
+#endif
     pause_time1 = pause_time + 1800.0d0
     call pflotranModelInsertWaypoint(model, pause_time1)
-
+#ifdef DEBUG_ELMPFEH
+    write(*,*) '[YX DEBUG][pflotran_model_mod::pflotranModelStepperRunTillPauseTime] pause_time1 = ', pause_time1
+#endif
     call model%simulation%RunToTime(pause_time)
 
     call pflotranModelDeleteWaypoint(model, pause_time)
@@ -1939,7 +1943,7 @@ end subroutine pflotranModelSetICs
          subsurf_realization => simulation%realization
       class default
          pflotran_model%option%io_buffer = " Unsupported simulation_type " // &
-            " in pflotranModelUpdateSourceSink."
+            " in pflotranModelUpdateSubSurfTCond."
          call PrintErrMsg(pflotran_model%option)
     end select
 
@@ -2047,6 +2051,7 @@ end subroutine pflotranModelSetICs
     use Global_Aux_module
     use Simulation_Base_class, only : simulation_base_type
     use Simulation_Subsurface_class, only : simulation_subsurface_type
+    use Material_Aux_module, only : material_auxvar_type
     use elm_pflotran_interface_data
     use Mapping_module
     use TH_Aux_module
@@ -2061,9 +2066,10 @@ end subroutine pflotranModelSetICs
     PetscErrorCode     :: ierr
     PetscInt           :: local_id, ghosted_id
     PetscReal, pointer :: sat_pf_p(:)
-    PetscReal, pointer :: sat_elm_p(:)
+    PetscReal, pointer :: mass_pf_p(:)
     type(TH_auxvar_type),pointer :: TH_auxvars(:)
     type(option_type), pointer :: option
+    class(material_auxvar_type), pointer :: material_auxvars(:)
 
     select type (simulation => pflotran_model%simulation)
       class is (simulation_subsurface_type)
@@ -2077,18 +2083,44 @@ end subroutine pflotranModelSetICs
     grid            => patch%grid
     global_aux_vars => patch%aux%Global%auxvars
     option          => realization%option
-
+    material_auxvars=> patch%aux%Material%auxvars
+#ifdef DEBUG_ELMPFEH
+     write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] before check mass_pf and mass_elm '
+     !stop
+#endif
     ! Save the saturation values
     call VecGetArrayF90(elm_pf_idata%sat_pf,sat_pf_p,ierr);CHKERRQ(ierr)
+    call VecGetArrayF90(elm_pf_idata%mass_pf,mass_pf_p, ierr);CHKERRQ(ierr)
     do local_id=1, grid%nlmax
       ghosted_id=grid%nL2G(local_id)
       sat_pf_p(local_id)=global_aux_vars(ghosted_id)%sat(1)
+      mass_pf_p(local_id)= &
+      global_aux_vars(ghosted_id)%sat(1) * &
+      global_aux_vars(ghosted_id)%den_kg(1) * &
+      material_auxvars(ghosted_id)%volume* &
+      material_auxvars(ghosted_id)%porosity
+! #ifdef DEBUG_ELMPFEH
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] check mass_pf and mass_elm '
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] local_id = ', local_id
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] ghosted_id = ', ghosted_id
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] sat_pf_p = ', sat_pf_p(local_id)
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] mass_pf_p = ', mass_pf_p(local_id)
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation]     |- global_aux_vars(ghosted_id)%sat(1) = ', global_aux_vars(ghosted_id)%sat(1)
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation]     |- global_aux_vars(ghosted_id)%den_kg(1) = ', global_aux_vars(ghosted_id)%den_kg(1)
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation]     |- material_auxvars(ghosted_id)%volume = ', material_auxvars(ghosted_id)%volume
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation]     |- material_auxvars(ghosted_id)%porosity = ', material_auxvars(ghosted_id)%porosity
+!      !stop
+! #endif
     enddo
     call VecRestoreArrayF90(elm_pf_idata%sat_pf,sat_pf_p,ierr);CHKERRQ(ierr)
+    call VecRestoreArrayF90(elm_pf_idata%mass_pf,mass_pf_p,ierr);CHKERRQ(ierr)
 
     call MappingSourceToDestination(pflotran_model%map_pf_sub_to_elm_sub, &
                                     elm_pf_idata%sat_pf, &
                                     elm_pf_idata%sat_elm)
+    call MappingSourceToDestination(pflotran_model%map_pf_sub_to_elm_sub, &
+                                     elm_pf_idata%mass_pf, &
+                                     elm_pf_idata%mass_elm)
 
     if (pflotran_model%option%iflowmode == TH_MODE .and. &
         option%flow%th_freezing) then
@@ -2391,7 +2423,10 @@ end subroutine pflotranModelSetICs
     discretization => realization%discretization
     patch => realization%patch
     grid => patch%grid
-
+! #ifdef DEBUG_ELMPFEH
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] grid%itype = ', grid%itype
+!      !stop
+! #endif
     call VecGetArrayF90(elm_pf_idata%area_top_face_pf,area_p, &
                         ierr);CHKERRQ(ierr)
     if (grid%itype == STRUCTURED_GRID) then
@@ -2404,7 +2439,7 @@ end subroutine pflotranModelSetICs
           area_p(local_id) = area1
         endif
       enddo
-    else if (grid%itype == UNSTRUCTURED_GRID) then
+    else if (grid%itype == UNSTRUCTURED_GRID .or. grid%itype == IMPLICIT_UNSTRUCTURED_GRID .or. grid%itype == EXPLICIT_UNSTRUCTURED_GRID) then
       ! Unstructured grid
       do local_id = 1,grid%nlmax
         ghosted_id = grid%nL2G(local_id)
@@ -2419,12 +2454,21 @@ end subroutine pflotranModelSetICs
           call PrintErrMsg(pflotran_model%option, &
             'Only hex and wedge cell_type supported in ELM-PFLOTRAN')
         endif
-
+! #ifdef DEBUG_ELMPFEH
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] cell_type = ', cell_type
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] iface = ', iface
+!      !stop
+! #endif
         ! Get face-id
         face_id = grid%unstructured_grid%cell_to_face_ghosted(iface, ghosted_id)
 
         ! Save face area
         area_p(local_id) = grid%unstructured_grid%face_area(face_id)
+! #ifdef DEBUG_ELMPFEH
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] face_id = ', face_id
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] area_p(local_id) = ', area_p(local_id)
+!      !stop
+! #endif
       enddo
     endif
     call VecRestoreArrayF90(elm_pf_idata%area_top_face_pf,area_p, &

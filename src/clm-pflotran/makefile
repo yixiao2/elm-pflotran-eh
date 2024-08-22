@@ -102,6 +102,10 @@ ifdef debug_elmpfeh
   MYFLAGS += ${FC_DEFINE_FLAG}DEBUG_ELMPFEH #[yx 240528]
 endif
 
+ifdef print_internalflow
+  MYFLAGS += ${FC_DEFINE_FLAG}PRINT_INTERNALFLOW #[yx 240716]
+endif
+
 ifdef gnu_code_coverage
   MYFLAGS += -fprofile-arcs -ftest-coverage
   LIBS += -lgcov

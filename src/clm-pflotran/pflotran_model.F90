@@ -2148,7 +2148,7 @@ end subroutine pflotranModelSetICs
   subroutine pflotranModelGetInternalflow(pflotran_model)
   !
   ! Extract internal flow fluxes simulated by
-  ! PFLOTRAN in a PETSc vector.
+  ! PFLOTRAN in a PETSc vector
   !
   ! Author: Yi Xiao
   ! Date: 07/11/2024
@@ -2231,7 +2231,7 @@ end subroutine pflotranModelSetICs
     endif
     write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] temp_int=', temp_int
     !write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] patch%imat=', patch%imat
-
+#endif
     connection_set_list => grid%internal_connection_set_list
     cur_connection_set => connection_set_list%first
     sum_connection = 0
@@ -2248,11 +2248,12 @@ end subroutine pflotranModelSetICs
       temp_vertical_efflux_p = 0.0
       temp_lateral_efflux_p = 0.0
 
+#ifdef DEBUG_ELMPFEH
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] initial temp_vertical_influx_p = ', temp_vertical_influx_p
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] initial temp_lateral_influx_p = ', temp_lateral_influx_p
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] initial temp_vertical_efflux_p = ', temp_vertical_efflux_p
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] initial temp_lateral_efflux_p = ', temp_lateral_efflux_p
-
+#endif
 
       do iconn = 1, cur_connection_set%num_connections
         sum_connection = sum_connection + 1
@@ -2312,20 +2313,23 @@ end subroutine pflotranModelSetICs
 
       end do
 
+#ifdef DEBUG_ELMPFEH
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] temp_vertical_influx_p = ', temp_vertical_influx_p
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] temp_lateral_influx_p = ', temp_lateral_influx_p
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] temp_vertical_efflux_p = ', temp_vertical_efflux_p
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] temp_lateral_efflux_p = ', temp_lateral_efflux_p
+#endif
 
       call VecRestoreArrayF90(elm_pf_idata%vertical_influx_pf,temp_vertical_influx_p,ierr);CHKERRQ(ierr)
       call VecRestoreArrayF90(elm_pf_idata%lateral_influx_pf,temp_lateral_influx_p,ierr);CHKERRQ(ierr)
       call VecRestoreArrayF90(elm_pf_idata%vertical_efflux_pf,temp_vertical_efflux_p,ierr);CHKERRQ(ierr)
       call VecRestoreArrayF90(elm_pf_idata%lateral_efflux_pf,temp_lateral_efflux_p,ierr);CHKERRQ(ierr)
 
-#ifdef PRINT_INTERNALFLOW
+#ifdef DEBUG_ELMPFEH
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] print elm_pf_idata%vertial/lateral_influx/efflux_pf to pf_internalflow.out'
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] option%time = ', option%time
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] realization%output_option%tconv = ', realization%output_option%tconv
+#endif
 
       ! modified based on output_hdf9.F90, subroutine OutputHDF5
       !call OutputHDF5OpenFile(option, output_option, var_list_type, file_id, first)
@@ -2398,12 +2402,9 @@ end subroutine pflotranModelSetICs
 
       hdf5_first = PETSC_FALSE
 
-#endif
-
       cur_connection_set => cur_connection_set%next
     end do
     !stop
-#endif
 
 !     do local_id=1, grid%nlmax
 !       ghosted_id=grid%nL2G(local_id)
@@ -2794,11 +2795,11 @@ end subroutine OutputHDF5WriteSnapShotAtts
 
         ! Save face area
         area_p(local_id) = grid%unstructured_grid%face_area(face_id)
-#ifdef DEBUG_ELMPFEH
-     write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] face_id = ', face_id
-     write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] area_p(local_id) = ', area_p(local_id)
-     !stop
-#endif
+! #ifdef DEBUG_ELMPFEH
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] face_id = ', face_id
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] area_p(local_id) = ', area_p(local_id)
+!      !stop
+! #endif
       enddo
     endif
     call VecRestoreArrayF90(elm_pf_idata%area_top_face_pf,area_p, &

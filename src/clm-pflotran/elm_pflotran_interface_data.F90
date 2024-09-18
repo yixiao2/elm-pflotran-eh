@@ -1,4 +1,13 @@
 module elm_pflotran_interface_data
+!
+! NOTES
+!     (1) For data transfer from ELM to PFLOTRAN <- create mpi vec for ELM + seq vec for PFLOTRAN
+!         For data transfer from PFLOTRAN to ELM <- create mpi vec for PFLOTRAN + seq vec for ELM
+!         '*_elmp': mpi vec for ELM variables; '*_pfp': mpi vec for PFLOTRAN variables
+!         '*_elms': seq vec for ELM variables; '*_pfs': seq vec for PFLOTRAN variables
+!     (2) '*_subsurf_':
+!     (3) '*_srf_':
+
 
 #include "petsc/finclude/petscsys.h"
 #include "petsc/finclude/petscvec.h"
@@ -10,6 +19,44 @@ module elm_pflotran_interface_data
   private
 
   type, public :: elm_pflotran_idata_type
+
+  !******************* A few global constants *******************************
+  PetscInt :: nzelm_mapped ! num of ELM soil layers that are mapped
+
+  !******************* Mesh property *******************************
+  ! Number of cells for the 3D subsurface domain
+  PetscInt :: nlelm_sub ! num of local elm cells
+  PetscInt :: ngelm_sub ! num of ghosted elm cells (ghosted = local+ghosts)
+  PetscInt :: nlpf_sub  ! num of local pflotran cells
+  PetscInt :: ngpf_sub  ! num of ghosted pflotran cells (ghosted = local+ghosts)
+
+  ! Number of cells for the surface of the 3D subsurface domain
+  PetscInt :: nlelm_2dsub  ! num of local elm cells
+  PetscInt :: ngelm_2dsub  ! num of ghosted elm cells (ghosted = local+ghosts)
+  PetscInt :: nlpf_2dsub   ! num of local pflotran cells
+  PetscInt :: ngpf_2dsub   ! num of ghosted pflotran cells (ghosted = local+ghosts)
+
+  ! Number of cells for the 2D surface domain
+  PetscInt :: nlelm_srf  ! num of local elm cells
+  PetscInt :: ngelm_srf  ! num of ghosted elm cells (ghosted = local+ghosts)
+  PetscInt :: nlpf_srf   ! num of local pflotran cells
+  PetscInt :: ngpf_srf   ! num of ghosted pflotran cells (ghosted = local+ghosts)
+
+  ! Area of top face of PF 3D domain
+  ! Vec :: area_top_face_elmp ! mpi vec
+  ! Vec :: area_top_face_pfs  ! seq vec
+  Vec :: area_top_face_pfp  ! mpi vec
+  Vec :: area_top_face_elms ! seq vec
+
+  ! ! Area of top face of ELM domain (projected)
+  ! to do, for elm flux convert to pflotran source sink
+  ! Vec :: area_proj_top_face_elmp ! mpi vec
+  ! Vec :: area_proj_top_face_pfs  ! seq vec
+  ! Vec :: area_proj_top_face_pfp  ! mpi vec
+  ! Vec :: area_proj_top_face_elms ! seq vec
+
+  ! cell IDs
+  Vec :: pfgrid_nG2A_pfp ! mpi vec
 
   ! Time invariant data:
 
@@ -45,17 +92,16 @@ module elm_pflotran_interface_data
   Vec :: bsw2_pf
   Vec :: thetares2_pf
   Vec :: press_pf
-  ! to output vertical and lateral internal fluxes
-  Vec :: vertical_influx_pf
-  Vec :: lateral_influx_pf
-  Vec :: vertical_efflux_pf
-  Vec :: lateral_efflux_pf
+
+  ! to output vertical and lateral internal fluxes - mpi vec
+  Vec :: vertical_influx_pfp
+  Vec :: lateral_influx_pfp
+  Vec :: vertical_efflux_pfp
+  Vec :: lateral_efflux_pfp
 
   ! (ii) Mesh property
 
-  ! Area of top face
-  Vec :: area_top_face_elm ! seq vec
-  Vec :: area_top_face_pf  ! mpi vec
+
 
   ! Time variant data
 
@@ -81,10 +127,10 @@ module elm_pflotran_interface_data
   !       no need for 'gflux_surf_elm'
 
   ! (iv) Saturation and mass
-  Vec :: sat_elm    ! seq vec
-  Vec :: sat_pf     ! mpi vec
-  Vec :: mass_elm    ! seq vec
-  Vec :: mass_pf     ! mpi vec
+  Vec :: sat_elms    ! seq vec
+  Vec :: sat_pfp     ! mpi vec
+  Vec :: mass_elms    ! seq vec
+  Vec :: mass_pfp     ! mpi vec
 
   ! (v) Subsurface temperature
   Vec :: temp_elm   ! seq vec
@@ -101,34 +147,15 @@ module elm_pflotran_interface_data
   Vec :: eff_therm_cond_elm ! seq vec
   Vec :: eff_therm_cond_pf  ! mpi vec
 
-  ! Number of cells for the 3D subsurface domain
-  PetscInt :: nlelm_sub ! num of local elm cells
-  PetscInt :: ngelm_sub ! num of ghosted elm cells (ghosted = local+ghosts)
-  PetscInt :: nlpf_sub  ! num of local pflotran cells
-  PetscInt :: ngpf_sub  ! num of ghosted pflotran cells (ghosted = local+ghosts)
-
-  ! Number of cells for the surface of the 3D subsurface domain
-  PetscInt :: nlelm_2dsub  ! num of local elm cells
-  PetscInt :: ngelm_2dsub  ! num of ghosted elm cells (ghosted = local+ghosts)
-  PetscInt :: nlpf_2dsub   ! num of local pflotran cells
-  PetscInt :: ngpf_2dsub   ! num of ghosted pflotran cells (ghosted = local+ghosts)
-
-  ! Number of cells for the 2D surface domain
-  PetscInt :: nlelm_srf  ! num of local elm cells
-  PetscInt :: ngelm_srf  ! num of ghosted elm cells (ghosted = local+ghosts)
-  PetscInt :: nlpf_srf   ! num of local pflotran cells
-  PetscInt :: ngpf_srf   ! num of ghosted pflotran cells (ghosted = local+ghosts)
-
-  PetscInt :: nzelm_mapped ! num of ELM soil layers that are mapped
 
 #ifdef PRINT_INTERNALFLOW
   ! to output component of qflx_elm; including mflx_infl/dew/et/sub_snow/snowlry_disp/drain
-  Vec :: mflx_infl_elm
-  Vec :: mflx_et_elm
-  Vec :: mflx_dew_elm
-  Vec :: mflx_sub_snow_elm
-  Vec :: mflx_snowlyr_disp_elm
-  Vec :: mflx_drain_elm
+  Vec :: mflx_infl_elms
+  Vec :: mflx_et_elms
+  Vec :: mflx_dew_elms
+  Vec :: mflx_sub_snow_elms
+  Vec :: mflx_snowlyr_disp_elms
+  Vec :: mflx_drain_elms
 #endif
 
   end type elm_pflotran_idata_type
@@ -198,10 +225,10 @@ contains
     elm_pf_idata%thetares2_pf = PETSC_NULL_VEC
     elm_pf_idata%press_pf = PETSC_NULL_VEC
 
-    elm_pf_idata%vertical_influx_pf = PETSC_NULL_VEC
-    elm_pf_idata%lateral_influx_pf = PETSC_NULL_VEC
-    elm_pf_idata%vertical_efflux_pf = PETSC_NULL_VEC
-    elm_pf_idata%lateral_efflux_pf = PETSC_NULL_VEC
+    elm_pf_idata%vertical_influx_pfp = PETSC_NULL_VEC
+    elm_pf_idata%lateral_influx_pfp = PETSC_NULL_VEC
+    elm_pf_idata%vertical_efflux_pfp = PETSC_NULL_VEC
+    elm_pf_idata%lateral_efflux_pfp = PETSC_NULL_VEC
 
     elm_pf_idata%qflx_elm = PETSC_NULL_VEC
     elm_pf_idata%qflx_pf = PETSC_NULL_VEC
@@ -214,10 +241,10 @@ contains
     elm_pf_idata%gflux_subsurf_elm = PETSC_NULL_VEC
     elm_pf_idata%gflux_subsurf_pf = PETSC_NULL_VEC
 
-    elm_pf_idata%sat_elm = PETSC_NULL_VEC
-    elm_pf_idata%sat_pf = PETSC_NULL_VEC
-    elm_pf_idata%mass_elm = PETSC_NULL_VEC
-    elm_pf_idata%mass_pf = PETSC_NULL_VEC
+    elm_pf_idata%sat_elms = PETSC_NULL_VEC
+    elm_pf_idata%sat_pfp = PETSC_NULL_VEC
+    elm_pf_idata%mass_elms = PETSC_NULL_VEC
+    elm_pf_idata%mass_pfp = PETSC_NULL_VEC
 
     elm_pf_idata%temp_elm = PETSC_NULL_VEC
     elm_pf_idata%temp_pf = PETSC_NULL_VEC
@@ -233,13 +260,20 @@ contains
 
     elm_pf_idata%nzelm_mapped = 0
 
+    ! elm_pf_idata%area_top_face_elmp = PETSC_NULL_VEC
+    ! elm_pf_idata%area_top_face_pfs  = PETSC_NULL_VEC
+    elm_pf_idata%area_top_face_pfp  = PETSC_NULL_VEC
+    elm_pf_idata%area_top_face_elms = PETSC_NULL_VEC
+
+    elm_pf_idata%pfgrid_nG2A_pfp = PETSC_NULL_VEC
+
 #ifdef PRINT_INTERNALFLOW
-    elm_pf_idata%mflx_infl_elm = PETSC_NULL_VEC
-    elm_pf_idata%mflx_et_elm = PETSC_NULL_VEC
-    elm_pf_idata%mflx_dew_elm = PETSC_NULL_VEC
-    elm_pf_idata%mflx_sub_snow_elm = PETSC_NULL_VEC
-    elm_pf_idata%mflx_snowlyr_disp_elm = PETSC_NULL_VEC
-    elm_pf_idata%mflx_drain_elm = PETSC_NULL_VEC
+    elm_pf_idata%mflx_infl_elms = PETSC_NULL_VEC
+    elm_pf_idata%mflx_et_elms = PETSC_NULL_VEC
+    elm_pf_idata%mflx_dew_elms = PETSC_NULL_VEC
+    elm_pf_idata%mflx_sub_snow_elms = PETSC_NULL_VEC
+    elm_pf_idata%mflx_snowlyr_disp_elms = PETSC_NULL_VEC
+    elm_pf_idata%mflx_drain_elms = PETSC_NULL_VEC
 #endif
 
   end subroutine ELMPFLOTRANIDataInit
@@ -287,6 +321,8 @@ contains
                       ierr);CHKERRQ(ierr)
     call VecDuplicate(elm_pf_idata%hksat_x_elm,elm_pf_idata%qflx_elm, &
                       ierr);CHKERRQ(ierr)
+    ! call VecDuplicate(elm_pf_idata%hksat_x_elm,elm_pf_idata%area_top_face_elmp, &
+    !                   ierr);CHKERRQ(ierr)
 
     call VecCreateMPI(mycomm,elm_pf_idata%nlelm_2dsub,PETSC_DECIDE, &
                       elm_pf_idata%gflux_subsurf_elm,ierr);CHKERRQ(ierr)
@@ -317,6 +353,8 @@ contains
                       ierr);CHKERRQ(ierr)
     call VecDuplicate(elm_pf_idata%hksat_x_pf,elm_pf_idata%qflx_pf, &
                       ierr);CHKERRQ(ierr)
+    ! call VecDuplicate(elm_pf_idata%hksat_x_pf,elm_pf_idata%area_top_face_pfs, &
+    !                   ierr);CHKERRQ(ierr)
 
     call VecCreateSeq(PETSC_COMM_SELF,elm_pf_idata%ngpf_2dsub, &
                       elm_pf_idata%gflux_subsurf_pf,ierr);CHKERRQ(ierr)
@@ -335,41 +373,44 @@ contains
     ! Create MPI Vectors for PFLOTRAN
     ! 3D Subsurface PFLOTRAN ---to--- 3D Subsurface ELM
     call VecCreateMPI(mycomm,elm_pf_idata%nlpf_sub,PETSC_DECIDE, &
-                      elm_pf_idata%sat_pf,ierr);CHKERRQ(ierr)
-    call VecSet(elm_pf_idata%sat_pf,0.d0,ierr);CHKERRQ(ierr)
+                      elm_pf_idata%sat_pfp,ierr);CHKERRQ(ierr)
+    call VecSet(elm_pf_idata%sat_pfp,0.d0,ierr);CHKERRQ(ierr)
 
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%mass_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%mass_pfp, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%temp_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%temp_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%sat_ice_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%sat_ice_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%area_top_face_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%area_top_face_pfp, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%eff_therm_cond_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%eff_therm_cond_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%hksat_x2_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%hksat_x2_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%hksat_y2_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%hksat_y2_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%hksat_z2_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%hksat_z2_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%sucsat2_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%sucsat2_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%watsat2_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%watsat2_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%bsw2_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%bsw2_pf, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%thetares2_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%thetares2_pf, &
                       ierr);CHKERRQ(ierr)
 
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%vertical_influx_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%pfgrid_nG2A_pfp, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%lateral_influx_pf, &
+
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%vertical_influx_pfp, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%vertical_efflux_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%lateral_influx_pfp, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pf,elm_pf_idata%lateral_efflux_pf, &
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%vertical_efflux_pfp, &
+                      ierr);CHKERRQ(ierr)
+    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%lateral_efflux_pfp, &
                       ierr);CHKERRQ(ierr)
 
     ! 2D Surface PFLOTRAN ---to--- 2D Surface ELM
@@ -380,32 +421,32 @@ contains
     ! Create Seq. Vectors for ELM
     ! 3D Subsurface PFLOTRAN ---to--- 3D Subsurface ELM
     call VecCreateSeq(PETSC_COMM_SELF,elm_pf_idata%ngelm_sub, &
-                      elm_pf_idata%sat_elm,ierr);CHKERRQ(ierr)
-    call VecSet(elm_pf_idata%sat_elm,0.d0,ierr);CHKERRQ(ierr)
+                      elm_pf_idata%sat_elms,ierr);CHKERRQ(ierr)
+    call VecSet(elm_pf_idata%sat_elms,0.d0,ierr);CHKERRQ(ierr)
 
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%mass_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%mass_elms, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%temp_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%temp_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%sat_ice_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%sat_ice_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%area_top_face_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%area_top_face_elms, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%eff_therm_cond_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%eff_therm_cond_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%hksat_x2_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%hksat_x2_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%hksat_y2_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%hksat_y2_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%hksat_z2_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%hksat_z2_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%sucsat2_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%sucsat2_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%watsat2_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%watsat2_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%bsw2_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%bsw2_elm, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%thetares2_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%thetares2_elm, &
                       ierr);CHKERRQ(ierr)
 
     ! 2D Surface PFLOTRAN ---to--- 2D Surface ELM
@@ -414,17 +455,17 @@ contains
     call VecSet(elm_pf_idata%h2osfc_elm,0.d0,ierr);CHKERRQ(ierr)
 
 #ifdef PRINT_INTERNALFLOW
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%mflx_et_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%mflx_et_elms, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%mflx_drain_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%mflx_drain_elms, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%mflx_infl_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%mflx_infl_elms, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%mflx_dew_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%mflx_dew_elms, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%mflx_sub_snow_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%mflx_sub_snow_elms, &
                       ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_elm,elm_pf_idata%mflx_snowlyr_disp_elm, &
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%mflx_snowlyr_disp_elms, &
                       ierr);CHKERRQ(ierr)
 #endif
 
@@ -474,10 +515,10 @@ contains
     if(elm_pf_idata%thetares2_pf      /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%thetares2_pf,ierr)
     if(elm_pf_idata%press_pf          /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%press_pf,ierr)
 
-    if(elm_pf_idata%vertical_influx_pf /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%vertical_influx_pf,ierr)
-    if(elm_pf_idata%lateral_influx_pf  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%lateral_influx_pf,ierr)
-    if(elm_pf_idata%vertical_efflux_pf /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%vertical_efflux_pf,ierr)
-    if(elm_pf_idata%lateral_efflux_pf  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%lateral_efflux_pf,ierr)
+    if(elm_pf_idata%vertical_influx_pfp /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%vertical_influx_pfp,ierr)
+    if(elm_pf_idata%lateral_influx_pfp  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%lateral_influx_pfp,ierr)
+    if(elm_pf_idata%vertical_efflux_pfp /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%vertical_efflux_pfp,ierr)
+    if(elm_pf_idata%lateral_efflux_pfp  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%lateral_efflux_pfp,ierr)
 
     if(elm_pf_idata%qflx_elm          /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%qflx_elm,ierr)
     if(elm_pf_idata%qflx_pf           /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%qflx_pf,ierr)
@@ -490,10 +531,10 @@ contains
     if(elm_pf_idata%gflux_subsurf_elm /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%gflux_subsurf_elm,ierr)
     if(elm_pf_idata%gflux_subsurf_pf  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%gflux_subsurf_pf,ierr)
 
-    if(elm_pf_idata%sat_elm           /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%sat_elm,ierr)
-    if(elm_pf_idata%sat_pf            /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%sat_pf,ierr)
-    if(elm_pf_idata%mass_elm          /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%mass_elm,ierr)
-    if(elm_pf_idata%mass_pf           /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%mass_pf,ierr)
+    if(elm_pf_idata%sat_elms           /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%sat_elms,ierr)
+    if(elm_pf_idata%sat_pfp            /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%sat_pfp,ierr)
+    if(elm_pf_idata%mass_elms          /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%mass_elms,ierr)
+    if(elm_pf_idata%mass_pfp           /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%mass_pfp,ierr)
 
     if(elm_pf_idata%temp_elm          /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%temp_elm,ierr)
     if(elm_pf_idata%temp_pf           /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%temp_pf,ierr)
@@ -504,27 +545,33 @@ contains
     if(elm_pf_idata%h2osfc_elm        /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%h2osfc_elm,ierr)
     if(elm_pf_idata%h2osfc_pf         /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%h2osfc_pf,ierr)
 
-    if(elm_pf_idata%area_top_face_elm  /= PETSC_NULL_VEC) &
-      call VecDestroy(elm_pf_idata%area_top_face_elm,ierr);CHKERRQ(ierr)
-    if(elm_pf_idata%area_top_face_pf  /= PETSC_NULL_VEC) &
-      call VecDestroy(elm_pf_idata%area_top_face_pf,ierr);CHKERRQ(ierr)
+    ! if(elm_pf_idata%area_top_face_elmp  /= PETSC_NULL_VEC) &
+    !   call VecDestroy(elm_pf_idata%area_top_face_elmp,ierr);CHKERRQ(ierr)
+    ! if(elm_pf_idata%area_top_face_pfs   /= PETSC_NULL_VEC) &
+    !   call VecDestroy(elm_pf_idata%area_top_face_pfs,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%area_top_face_pfp   /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%area_top_face_pfp,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%area_top_face_elms  /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%area_top_face_elms,ierr);CHKERRQ(ierr)
+
+    if(elm_pf_idata%pfgrid_nG2A_pfp  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%pfgrid_nG2A_pfp,ierr)
 
     if(elm_pf_idata%eff_therm_cond_elm  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%eff_therm_cond_elm,ierr)
     if(elm_pf_idata%eff_therm_cond_pf  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%eff_therm_cond_pf,ierr)
 
 #ifdef PRINT_INTERNALFLOW
-    if(elm_pf_idata%mflx_infl_elm  /= PETSC_NULL_VEC) &
-      call VecDestroy(elm_pf_idata%mflx_infl_elm ,ierr);CHKERRQ(ierr)
-    if(elm_pf_idata%mflx_et_elm  /= PETSC_NULL_VEC) &
-      call VecDestroy(elm_pf_idata%mflx_et_elm ,ierr);CHKERRQ(ierr)
-    if(elm_pf_idata%mflx_dew_elm  /= PETSC_NULL_VEC) &
-      call VecDestroy(elm_pf_idata%mflx_dew_elm ,ierr);CHKERRQ(ierr)
-    if(elm_pf_idata%mflx_sub_snow_elm  /= PETSC_NULL_VEC) &
-      call VecDestroy(elm_pf_idata%mflx_sub_snow_elm ,ierr);CHKERRQ(ierr)
-    if(elm_pf_idata%mflx_snowlyr_disp_elm  /= PETSC_NULL_VEC) &
-      call VecDestroy(elm_pf_idata%mflx_snowlyr_disp_elm ,ierr);CHKERRQ(ierr)
-    if(elm_pf_idata%mflx_drain_elm  /= PETSC_NULL_VEC) &
-      call VecDestroy(elm_pf_idata%mflx_drain_elm ,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%mflx_infl_elms  /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%mflx_infl_elms ,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%mflx_et_elms  /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%mflx_et_elms ,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%mflx_dew_elms  /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%mflx_dew_elms ,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%mflx_sub_snow_elms  /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%mflx_sub_snow_elms ,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%mflx_snowlyr_disp_elms  /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%mflx_snowlyr_disp_elms ,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%mflx_drain_elms  /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%mflx_drain_elms ,ierr);CHKERRQ(ierr)
 #endif
 
   end subroutine ELMPFLOTRANIDataDestroy

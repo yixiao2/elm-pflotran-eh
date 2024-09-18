@@ -99,7 +99,8 @@ module pflotran_model_module
        pflotranModelStepperCheckpoint,       &
        pflotranModelNSurfCells3DDomain,      &
        pflotranModelGetTopFaceArea,          &
-       pflotranModelDestroy
+       pflotranModelDestroy,                 &
+       pflotranModelGetInternalflow
 
   private :: &
        pflotranModelSetupMappingFiles
@@ -1626,6 +1627,7 @@ end subroutine pflotranModelSetICs
        write(model%option%fid_out, *), '>>>> Inserting waypoint at pause_time = ', pause_time
     endif
 #ifdef DEBUG_ELMPFEH
+    write(*,*) '[YX DEBUG][pflotran_model_mod::pflotranModelStepperRunTillPauseTime] OptionIsIORank(model%option) = ', OptionIsIORank(model%option)
     write(*,*) '[YX DEBUG][pflotran_model_mod::pflotranModelStepperRunTillPauseTime] pause_time = ', pause_time
 #endif
     pause_time1 = pause_time + 1800.0d0
@@ -1868,7 +1870,9 @@ end subroutine pflotranModelSetICs
     enddo
     call VecRestoreArrayF90(elm_pf_idata%qflx_pf,qflx_pf_loc, &
                             ierr);CHKERRQ(ierr)
-
+#ifdef DEBUG_ELMPFEH
+    write(*,*) '[YX DEBUG][pflotran_model_mod::pflotranModelUpdateSourceSink] run'
+#endif
     if(.not.found) &
       call PrintErrMsg(pflotran_model%option,'elm_et_ss not found in ' // &
                        'source-sink list of subsurface model.')
@@ -2084,13 +2088,10 @@ end subroutine pflotranModelSetICs
     global_aux_vars => patch%aux%Global%auxvars
     option          => realization%option
     material_auxvars=> patch%aux%Material%auxvars
-! #ifdef DEBUG_ELMPFEH
-!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] before check mass_pf and mass_elm '
-!      !stop
-! #endif
+
     ! Save the saturation values
-    call VecGetArrayF90(elm_pf_idata%sat_pf,sat_pf_p,ierr);CHKERRQ(ierr)
-    call VecGetArrayF90(elm_pf_idata%mass_pf,mass_pf_p, ierr);CHKERRQ(ierr)
+    call VecGetArrayF90(elm_pf_idata%sat_pfp,sat_pf_p,ierr);CHKERRQ(ierr)
+    call VecGetArrayF90(elm_pf_idata%mass_pfp,mass_pf_p, ierr);CHKERRQ(ierr)
     do local_id=1, grid%nlmax
       ghosted_id=grid%nL2G(local_id)
       sat_pf_p(local_id)=global_aux_vars(ghosted_id)%sat(1)
@@ -2100,7 +2101,7 @@ end subroutine pflotranModelSetICs
       material_auxvars(ghosted_id)%volume* &
       material_auxvars(ghosted_id)%porosity
 ! #ifdef DEBUG_ELMPFEH
-!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] check mass_pf and mass_elm '
+!      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] check mass_pfp and mass_elms '
 !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] local_id = ', local_id
 !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] ghosted_id = ', ghosted_id
 !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] sat_pf_p = ', sat_pf_p(local_id)
@@ -2112,16 +2113,15 @@ end subroutine pflotranModelSetICs
 !      !stop
 ! #endif
     enddo
-    call VecRestoreArrayF90(elm_pf_idata%sat_pf,sat_pf_p,ierr);CHKERRQ(ierr)
-    call VecRestoreArrayF90(elm_pf_idata%mass_pf,mass_pf_p,ierr);CHKERRQ(ierr)
-
+    call VecRestoreArrayF90(elm_pf_idata%sat_pfp,sat_pf_p,ierr);CHKERRQ(ierr)
+    call VecRestoreArrayF90(elm_pf_idata%mass_pfp,mass_pf_p,ierr);CHKERRQ(ierr)
     call MappingSourceToDestination(pflotran_model%map_pf_sub_to_elm_sub, &
-                                    elm_pf_idata%sat_pf, &
-                                    elm_pf_idata%sat_elm)
+                                    elm_pf_idata%sat_pfp, &
+                                    elm_pf_idata%sat_elms)
     call MappingSourceToDestination(pflotran_model%map_pf_sub_to_elm_sub, &
-                                     elm_pf_idata%mass_pf, &
-                                     elm_pf_idata%mass_elm)
-
+                                     elm_pf_idata%mass_pfp, &
+                                     elm_pf_idata%mass_elms)
+    write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] after MappingSourceToDestination '
     if (pflotran_model%option%iflowmode == TH_MODE .and. &
         option%flow%th_freezing) then
 
@@ -2173,11 +2173,14 @@ end subroutine pflotranModelSetICs
     use HDF5_module
     use HDF5_Aux_module
     use String_module
+    ! use PFLOTRAN_Constants_module ! for ONEDOF
+    ! use Discretization_module
 
     implicit none
 
-    type(pflotran_model_type), pointer        :: pflotran_model
+    type(pflotran_model_type), pointer                   :: pflotran_model
     class(realization_subsurface_type), pointer          :: realization
+    ! type(discretization_type), pointer                   :: discretization
     type(patch_type), pointer                 :: patch
     type(grid_type), pointer                  :: grid
     type(global_auxvar_type), pointer         :: global_aux_vars(:)
@@ -2193,6 +2196,7 @@ end subroutine pflotranModelSetICs
     type(connection_set_list_type), pointer :: connection_set_list
     type(connection_set_type), pointer :: cur_connection_set
     PetscReal, pointer :: temp_vertical_influx_p(:), temp_lateral_influx_p(:), temp_vertical_efflux_p(:), temp_lateral_efflux_p(:)
+    PetscReal, pointer :: temp_debug_elm(:)
     PetscReal, parameter :: eps = 1.0e-5
     PetscReal :: temp_dirz
     PetscViewer :: viewer
@@ -2205,11 +2209,11 @@ end subroutine pflotranModelSetICs
     integer(HID_T) :: grp_id
     type(output_variable_type), pointer :: cur_variable
     Vec :: global_vec
+    ! Vec :: natural_vec
 
     select type (simulation => pflotran_model%simulation)
       class is (simulation_subsurface_type)
          realization => simulation%realization
-         !write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] simulation%waypoint_list_subsurface%last%time = ', simulation%waypoint_list_subsurface%last%time
       class default
          nullify(realization)
          pflotran_model%option%io_buffer = "ERROR: XXX only works on subsurface simulations."
@@ -2224,13 +2228,13 @@ end subroutine pflotranModelSetICs
 
     ! dev: try output connection set here; then see how to classify into lateral and vertical flow; then see how to map to ELM
 #ifdef DEBUG_ELMPFEH
-    temp_int = ConnectionGetNumberInList(patch%grid%internal_connection_set_list)
-    write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] associated(patch%internal_flow_fluxes) = ' , associated(patch%internal_flow_fluxes)
-    if (associated(patch%internal_flow_fluxes)) then
-      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] patch%internal_flow_fluxes(1,:)=', patch%internal_flow_fluxes(1,:)
-    endif
-    write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] temp_int=', temp_int
-    !write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] patch%imat=', patch%imat
+    ! temp_int = ConnectionGetNumberInList(patch%grid%internal_connection_set_list)
+    ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] associated(patch%internal_flow_fluxes) = ' , associated(patch%internal_flow_fluxes)
+    ! if (associated(patch%internal_flow_fluxes)) then
+    !   write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] patch%internal_flow_fluxes(1,:)=', patch%internal_flow_fluxes(1,:)
+    ! endif
+    ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] temp_int=', temp_int
+    ! !write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] patch%imat=', patch%imat
 #endif
     connection_set_list => grid%internal_connection_set_list
     cur_connection_set => connection_set_list%first
@@ -2238,10 +2242,10 @@ end subroutine pflotranModelSetICs
     do
       if (.not.associated(cur_connection_set)) exit
 
-      call VecGetArrayF90(elm_pf_idata%vertical_influx_pf,temp_vertical_influx_p,ierr);CHKERRQ(ierr)
-      call VecGetArrayF90(elm_pf_idata%lateral_influx_pf,temp_lateral_influx_p,ierr);CHKERRQ(ierr)
-      call VecGetArrayF90(elm_pf_idata%vertical_efflux_pf,temp_vertical_efflux_p,ierr);CHKERRQ(ierr)
-      call VecGetArrayF90(elm_pf_idata%lateral_efflux_pf,temp_lateral_efflux_p,ierr);CHKERRQ(ierr)
+      call VecGetArrayF90(elm_pf_idata%vertical_influx_pfp,temp_vertical_influx_p,ierr);CHKERRQ(ierr)
+      call VecGetArrayF90(elm_pf_idata%lateral_influx_pfp,temp_lateral_influx_p,ierr);CHKERRQ(ierr)
+      call VecGetArrayF90(elm_pf_idata%vertical_efflux_pfp,temp_vertical_efflux_p,ierr);CHKERRQ(ierr)
+      call VecGetArrayF90(elm_pf_idata%lateral_efflux_pfp,temp_lateral_efflux_p,ierr);CHKERRQ(ierr)
 
       temp_vertical_influx_p = 0.0
       temp_lateral_influx_p = 0.0
@@ -2320,17 +2324,22 @@ end subroutine pflotranModelSetICs
       write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] temp_lateral_efflux_p = ', temp_lateral_efflux_p
 #endif
 
-      call VecRestoreArrayF90(elm_pf_idata%vertical_influx_pf,temp_vertical_influx_p,ierr);CHKERRQ(ierr)
-      call VecRestoreArrayF90(elm_pf_idata%lateral_influx_pf,temp_lateral_influx_p,ierr);CHKERRQ(ierr)
-      call VecRestoreArrayF90(elm_pf_idata%vertical_efflux_pf,temp_vertical_efflux_p,ierr);CHKERRQ(ierr)
-      call VecRestoreArrayF90(elm_pf_idata%lateral_efflux_pf,temp_lateral_efflux_p,ierr);CHKERRQ(ierr)
+      call VecRestoreArrayF90(elm_pf_idata%vertical_influx_pfp,temp_vertical_influx_p,ierr);CHKERRQ(ierr)
+      call VecRestoreArrayF90(elm_pf_idata%lateral_influx_pfp,temp_lateral_influx_p,ierr);CHKERRQ(ierr)
+      call VecRestoreArrayF90(elm_pf_idata%vertical_efflux_pfp,temp_vertical_efflux_p,ierr);CHKERRQ(ierr)
+      call VecRestoreArrayF90(elm_pf_idata%lateral_efflux_pfp,temp_lateral_efflux_p,ierr);CHKERRQ(ierr)
 
 #ifdef DEBUG_ELMPFEH
-      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] print elm_pf_idata%vertial/lateral_influx/efflux_pf to pf_internalflow.out'
-      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] option%time = ', option%time
-      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] realization%output_option%tconv = ', realization%output_option%tconv
-#endif
+      ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] print elm_pf_idata%vertial/lateral_influx/efflux_pf to pf_internalflow.out'
+      ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] option%time = ', option%time
+      ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] realization%output_option%tconv = ', realization%output_option%tconv
+      ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] OptionIsIORank(option) = ', OptionIsIORank(option)
 
+      ! call VecGetArrayF90(elm_pf_idata%area_top_face_elms,temp_debug_elm,ierr);CHKERRQ(ierr)
+      ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] elm_pf_idata%area_top_face_elms = ', temp_debug_elm
+      ! call VecRestoreArrayF90(elm_pf_idata%area_top_face_elms,temp_debug_elm,ierr);CHKERRQ(ierr)
+#endif
+    !if (OptionIsIORank(option)) then
       ! modified based on output_hdf9.F90, subroutine OutputHDF5
       !call OutputHDF5OpenFile(option, output_option, var_list_type, file_id, first)
       if (abs(option%time - 1800.0) < eps) then
@@ -2344,64 +2353,74 @@ end subroutine pflotranModelSetICs
       endif
       if (hdf5_first) then
         call HDF5FileOpen(filename,file_id,PETSC_TRUE,option)
+        ! create a group for global information
+        string = 'Domain'
+        call HDF5GroupCreate(file_id,string,grp_id,option)
+        string = 'pfgrid_nG2A_pfp'
+        call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%pfgrid_nG2A_pfp,grp_id, &
+                                      H5T_NATIVE_INTEGER)
+        call HDF5GroupClose(grp_id,option)
       endif
-
       ! create a group for the data set
       write(string,'(''Time:'',es13.5,x,a1)') &
             option%time/output_option%tconv,output_option%tunit
-      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] string = ', string
       call HDF5GroupOpenOrCreate(file_id,string,grp_id,option)
-
       ! write group attributes
       call OutputHDF5WriteSnapShotAtts(grp_id,option)
 
-      ! write elm_pf_idata%{vertical_influx_pf, lateral_influx_pf, vertical_efflux_pf, lateral_efflux_pf} to file
-      ! write elm_pf_idata%{mass_elm, area_top_face_elm, qflx_elm} to file
-      string = 'vertical_influx_pf'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%vertical_influx_pf,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'lateral_influx_pf'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%lateral_influx_pf,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'vertical_efflux_pf'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%vertical_efflux_pf,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'lateral_efflux_pf'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%lateral_efflux_pf,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'area_top_face_elm'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%area_top_face_elm,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'area_top_face_pf'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%area_top_face_pf,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'mflx_infl_elm'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_infl_elm,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'mflx_et_elm'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_et_elm,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'mflx_dew_elm'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_dew_elm,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'mflx_sub_snow_elm'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_sub_snow_elm,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'mflx_snowlyr_disp_elm'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_snowlyr_disp_elm,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'mflx_drain_elm'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_drain_elm,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      string = 'mass_elm'
-      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mass_elm,grp_id, &
-                                    H5T_NATIVE_DOUBLE)
-      call HDF5GroupClose(grp_id,option)
+      ! write elm_pf_idata%{vertical_influx_pfp, lateral_influx_pfp, vertical_efflux_pfp, lateral_efflux_pfp} to file
+      ! write elm_pf_idata%{mass_elms, area_top_face_elms, qflx_elm} to file
+      ! string = 'vertical_influx_pfp'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%vertical_influx_pfp,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'lateral_influx_pfp'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%lateral_influx_pfp,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'vertical_efflux_pfp'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%vertical_efflux_pfp,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'lateral_efflux_pfp'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%lateral_efflux_pfp,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
 
+      ! call HDF5DatasetWrite(grp_id, 'PF_MPI_local_size', elm_pf_idata%nlpf_sub, option%driver)
+      ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] elm_pf_idata%area_top_face_elmp = ', elm_pf_idata%area_top_face_elmp
+      string = 'area_top_face_pfp'
+      call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%area_top_face_pfp,grp_id, &
+                                    H5T_NATIVE_DOUBLE)
+      ! write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetInternalflow] elm_pf_idata%area_top_face_elms = ', elm_pf_idata%area_top_face_elms
+      string = 'area_top_face_elms'
+      call pflotranModelHDF5WriteDataSetFromLocVec(string,option,elm_pf_idata%area_top_face_elms,grp_id, &
+                                                    H5T_NATIVE_DOUBLE)
+#ifdef PRINT_INTERNALFLOW
+      ! string = 'mflx_infl_elms'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_infl_elms,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'mflx_et_elms'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_et_elms,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'mflx_dew_elms'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_dew_elms,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'mflx_sub_snow_elms'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_sub_snow_elms,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'mflx_snowlyr_disp_elms'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_snowlyr_disp_elms,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'mflx_drain_elms'
+      ! call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mflx_drain_elms,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+      ! string = 'mass_elms'
+      ! !call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%mass_elms,grp_id, &
+      !                               H5T_NATIVE_DOUBLE)
+#endif
+
+      call HDF5GroupClose(grp_id,option)
       call OutputHDF5CloseFile(option, file_id)
 
       hdf5_first = PETSC_FALSE
-
+    ! end if
       cur_connection_set => cur_connection_set%next
     end do
     !stop
@@ -2415,7 +2434,7 @@ end subroutine pflotranModelSetICs
 !       material_auxvars(ghosted_id)%volume* &
 !       material_auxvars(ghosted_id)%porosity
 ! ! #ifdef DEBUG_ELMPFEH
-! !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] check mass_pf and mass_elm '
+! !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] check mass_pfp and mass_elms'
 ! !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] local_id = ', local_id
 ! !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] ghosted_id = ', ghosted_id
 ! !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSaturation] sat_pf_p = ', sat_pf_p(local_id)
@@ -2443,6 +2462,7 @@ subroutine OutputHDF5WriteSnapShotAtts(parent_id,option)
   ! Author: Glenn Hammond
   ! Date: 07/31/19
   !
+  ! a private subroutine from output_hdf5.F90 in PFLOTRAN
   use hdf5
   use Option_module
 
@@ -2473,6 +2493,52 @@ subroutine OutputHDF5WriteSnapShotAtts(parent_id,option)
   call h5sclose_f(dataspace_id, hdf5_err)
 
 end subroutine OutputHDF5WriteSnapShotAtts
+! ************************************************************************** !
+
+  subroutine pflotranModelHDF5WriteDataSetFromLocVec(name, option, vec_seq, file_id, data_type)
+  !
+  ! This subroutine extend the HDF5WriteDataSetFromVec to write a local seq vector
+  !
+  ! Author: Yi Xiao, PNNL
+  ! Date: 09/17/24
+  !
+
+  use hdf5
+  use HDF5_module
+  use Option_module
+
+  implicit none
+
+  character(len=*) :: name
+  Vec :: vec_seq, vec_mpi
+  IS  :: is_seq, is_mpi
+  integer(HID_T) :: file_id
+  integer(HID_T) :: data_type
+  type(option_type) :: option
+
+  PetscInt              :: local_size, istart, iend, ierr
+  VecScatter            :: scatter_context
+
+  call VecGetSize(vec_seq, local_size, ierr);CHKERRQ(ierr)
+  call VecCreateMPI(MPI_COMM_WORLD, local_size, PETSC_DECIDE, vec_mpi, ierr);CHKERRQ(ierr)
+
+  call VecGetOwnershipRange(vec_mpi, istart, iend, ierr);CHKERRQ(ierr)
+  call ISCreateStride(PETSC_COMM_SELF, local_size, 0, 1, is_seq, ierr);CHKERRQ(ierr)
+  call ISCreateStride(PETSC_COMM_WORLD, local_size, istart, 1, is_mpi, ierr);CHKERRQ(ierr)
+
+  call VecScatterCreate(vec_seq, is_seq, vec_mpi, is_mpi, scatter_context, ierr);CHKERRQ(ierr)
+  call VecScatterBegin(scatter_context, vec_seq, vec_mpi, INSERT_VALUES, SCATTER_FORWARD, ierr);CHKERRQ(ierr)
+  call VecScatterEnd(scatter_context, vec_seq, vec_mpi, INSERT_VALUES, SCATTER_FORWARD, ierr);CHKERRQ(ierr)
+
+  call HDF5WriteDataSetFromVec(name, option, vec_mpi, file_id, data_type)
+
+  call VecScatterDestroy(scatter_context, ierr);CHKERRQ(ierr)
+  call VecDestroy(vec_mpi, ierr);CHKERRQ(ierr)
+  call ISDestroy(is_seq, ierr);CHKERRQ(ierr)
+  call ISDestroy(is_mpi, ierr);CHKERRQ(ierr)
+
+  end subroutine pflotranModelHDF5WriteDataSetFromLocVec
+
 ! ************************************************************************** !
 
   subroutine pflotranModelGetTemperature(pflotran_model)
@@ -2739,6 +2805,7 @@ end subroutine OutputHDF5WriteSnapShotAtts
     PetscReal :: area1
 
     PetscScalar, pointer :: area_p(:)
+    PetscReal,   pointer :: idx_p(:) ! print as Integer
     PetscErrorCode :: ierr
 
     option => pflotran_model%option
@@ -2757,7 +2824,9 @@ end subroutine OutputHDF5WriteSnapShotAtts
 !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] grid%itype = ', grid%itype
 !      !stop
 ! #endif
-    call VecGetArrayF90(elm_pf_idata%area_top_face_pf,area_p, &
+    call VecGetArrayF90(elm_pf_idata%area_top_face_pfp,area_p, &
+                        ierr);CHKERRQ(ierr)
+    call VecGetArrayF90(elm_pf_idata%pfgrid_nG2A_pfp,idx_p, &
                         ierr);CHKERRQ(ierr)
 
     if (grid%itype == STRUCTURED_GRID) then
@@ -2768,6 +2837,7 @@ end subroutine OutputHDF5WriteSnapShotAtts
           area1 = grid%structured_grid%dx(ghosted_id)* &
                   grid%structured_grid%dy(ghosted_id)
           area_p(local_id) = area1
+          idx_p(local_id) = grid%nG2A(ghosted_id)
         endif
       enddo
     else if (grid%itype == UNSTRUCTURED_GRID .or. grid%itype == IMPLICIT_UNSTRUCTURED_GRID .or. grid%itype == EXPLICIT_UNSTRUCTURED_GRID) then
@@ -2795,6 +2865,7 @@ end subroutine OutputHDF5WriteSnapShotAtts
 
         ! Save face area
         area_p(local_id) = grid%unstructured_grid%face_area(face_id)
+        idx_p(local_id) = grid%nG2A(ghosted_id)
 ! #ifdef DEBUG_ELMPFEH
 !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] face_id = ', face_id
 !      write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetTopFaceArea] area_p(local_id) = ', area_p(local_id)
@@ -2802,11 +2873,13 @@ end subroutine OutputHDF5WriteSnapShotAtts
 ! #endif
       enddo
     endif
-    call VecRestoreArrayF90(elm_pf_idata%area_top_face_pf,area_p, &
+    call VecRestoreArrayF90(elm_pf_idata%area_top_face_pfp,area_p, &
+                            ierr);CHKERRQ(ierr)
+    call VecRestoreArrayF90(elm_pf_idata%pfgrid_nG2A_pfp,idx_p, &
                             ierr);CHKERRQ(ierr)
     call MappingSourceToDestination(pflotran_model%map_pf_sub_to_elm_sub, &
-                                    elm_pf_idata%area_top_face_pf, &
-                                    elm_pf_idata%area_top_face_elm)
+                                    elm_pf_idata%area_top_face_pfp, &
+                                    elm_pf_idata%area_top_face_elms)
   end subroutine pflotranModelGetTopFaceArea
 
 ! ************************************************************************** !

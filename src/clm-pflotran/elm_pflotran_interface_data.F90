@@ -56,7 +56,7 @@ module elm_pflotran_interface_data
   ! Vec :: area_proj_top_face_elms ! seq vec
 
   ! cell IDs
-  Vec :: pfgrid_nG2A_pfp ! mpi vec
+  Vec :: pfgrid_nG2A_pfs ! mpi vec
 
   ! Time invariant data:
 
@@ -93,11 +93,10 @@ module elm_pflotran_interface_data
   Vec :: thetares2_pf
   Vec :: press_pf
 
-  ! to output vertical and lateral internal fluxes - mpi vec
-  Vec :: vertical_influx_pfp
-  Vec :: lateral_influx_pfp
-  Vec :: vertical_efflux_pfp
-  Vec :: lateral_efflux_pfp
+  ! to output vertical and lateral internal fluxes - seq vec
+  ! classify patch%internal_flow_fluxes in PFLOTRAN, in pflotran_model_module::pflotranModelGetInternalflow
+  Vec :: internal_flow_flux_vertical_pfs
+  Vec :: internal_flow_flux_lateral_pfs
 
   ! (ii) Mesh property
 
@@ -225,10 +224,8 @@ contains
     elm_pf_idata%thetares2_pf = PETSC_NULL_VEC
     elm_pf_idata%press_pf = PETSC_NULL_VEC
 
-    elm_pf_idata%vertical_influx_pfp = PETSC_NULL_VEC
-    elm_pf_idata%lateral_influx_pfp = PETSC_NULL_VEC
-    elm_pf_idata%vertical_efflux_pfp = PETSC_NULL_VEC
-    elm_pf_idata%lateral_efflux_pfp = PETSC_NULL_VEC
+    elm_pf_idata%internal_flow_flux_vertical_pfs = PETSC_NULL_VEC
+    elm_pf_idata%internal_flow_flux_lateral_pfs = PETSC_NULL_VEC
 
     elm_pf_idata%qflx_elm = PETSC_NULL_VEC
     elm_pf_idata%qflx_pf = PETSC_NULL_VEC
@@ -265,7 +262,7 @@ contains
     elm_pf_idata%area_top_face_pfp  = PETSC_NULL_VEC
     elm_pf_idata%area_top_face_elms = PETSC_NULL_VEC
 
-    elm_pf_idata%pfgrid_nG2A_pfp = PETSC_NULL_VEC
+    elm_pf_idata%pfgrid_nG2A_pfs = PETSC_NULL_VEC
 
 #ifdef PRINT_INTERNALFLOW
     elm_pf_idata%mflx_infl_elms = PETSC_NULL_VEC
@@ -401,16 +398,12 @@ contains
     call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%thetares2_pf, &
                       ierr);CHKERRQ(ierr)
 
-    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%pfgrid_nG2A_pfp, &
+    call VecCreateMPI(PETSC_COMM_SELF,elm_pf_idata%nlpf_sub,PETSC_DECIDE, &
+                      elm_pf_idata%pfgrid_nG2A_pfs,ierr);CHKERRQ(ierr)
+    call VecSet(elm_pf_idata%pfgrid_nG2A_pfs,0.d0,ierr);CHKERRQ(ierr)
+    call VecDuplicate(elm_pf_idata%pfgrid_nG2A_pfs,elm_pf_idata%internal_flow_flux_vertical_pfs, &
                       ierr);CHKERRQ(ierr)
-
-    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%vertical_influx_pfp, &
-                      ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%lateral_influx_pfp, &
-                      ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%vertical_efflux_pfp, &
-                      ierr);CHKERRQ(ierr)
-    call VecDuplicate(elm_pf_idata%sat_pfp,elm_pf_idata%lateral_efflux_pfp, &
+    call VecDuplicate(elm_pf_idata%pfgrid_nG2A_pfs,elm_pf_idata%internal_flow_flux_lateral_pfs, &
                       ierr);CHKERRQ(ierr)
 
     ! 2D Surface PFLOTRAN ---to--- 2D Surface ELM
@@ -515,10 +508,8 @@ contains
     if(elm_pf_idata%thetares2_pf      /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%thetares2_pf,ierr)
     if(elm_pf_idata%press_pf          /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%press_pf,ierr)
 
-    if(elm_pf_idata%vertical_influx_pfp /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%vertical_influx_pfp,ierr)
-    if(elm_pf_idata%lateral_influx_pfp  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%lateral_influx_pfp,ierr)
-    if(elm_pf_idata%vertical_efflux_pfp /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%vertical_efflux_pfp,ierr)
-    if(elm_pf_idata%lateral_efflux_pfp  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%lateral_efflux_pfp,ierr)
+    if(elm_pf_idata%internal_flow_flux_vertical_pfs /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%internal_flow_flux_vertical_pfs,ierr)
+    if(elm_pf_idata%internal_flow_flux_lateral_pfs  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%internal_flow_flux_lateral_pfs,ierr)
 
     if(elm_pf_idata%qflx_elm          /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%qflx_elm,ierr)
     if(elm_pf_idata%qflx_pf           /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%qflx_pf,ierr)
@@ -554,7 +545,7 @@ contains
     if(elm_pf_idata%area_top_face_elms  /= PETSC_NULL_VEC) &
       call VecDestroy(elm_pf_idata%area_top_face_elms,ierr);CHKERRQ(ierr)
 
-    if(elm_pf_idata%pfgrid_nG2A_pfp  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%pfgrid_nG2A_pfp,ierr)
+    if(elm_pf_idata%pfgrid_nG2A_pfs  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%pfgrid_nG2A_pfs,ierr)
 
     if(elm_pf_idata%eff_therm_cond_elm  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%eff_therm_cond_elm,ierr)
     if(elm_pf_idata%eff_therm_cond_pf  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%eff_therm_cond_pf,ierr)

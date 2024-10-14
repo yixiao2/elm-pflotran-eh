@@ -2275,6 +2275,15 @@ end subroutine pflotranModelSetICs
         string = 'pfgrid_nG2A_pfs'
         call pflotranModelHDF5WriteDataSetFromLocVec(string,option,elm_pf_idata%pfgrid_nG2A_pfs,grp_id, &
                                       H5T_NATIVE_INTEGER)
+        string = 'area_top_face_pfp'
+        call HDF5WriteDataSetFromVec(string,option,elm_pf_idata%area_top_face_pfp,grp_id, &
+                                      H5T_NATIVE_DOUBLE)
+        string = 'area_top_face_elms'
+        call pflotranModelHDF5WriteDataSetFromLocVec(string,option,elm_pf_idata%area_top_face_elms,grp_id, &
+                                                      H5T_NATIVE_DOUBLE)
+        string = 'area_proj_top_face_elms'
+        call pflotranModelHDF5WriteDataSetFromLocVec(string,option,elm_pf_idata%area_proj_top_face_elms,grp_id, &
+                                                      H5T_NATIVE_DOUBLE)
         call HDF5GroupClose(grp_id,option)
       endif
       ! create a group for the data set
@@ -2292,6 +2301,7 @@ end subroutine pflotranModelSetICs
       call pflotranModelHDF5WriteDataSetFromLocVec(string,option,elm_pf_idata%internal_flow_flux_lateral_pfs,grp_id, &
                                     H5T_NATIVE_DOUBLE)
 #ifdef PRINT_INTERNALFLOW
+      ! write elm_pf_idata%{mass_xxx_elms} to file
       string = 'mflx_infl_elms'
       call pflotranModelHDF5WriteDataSetFromLocVec(string,option,elm_pf_idata%mflx_infl_elms,grp_id, &
                                     H5T_NATIVE_DOUBLE)
@@ -2321,6 +2331,7 @@ end subroutine pflotranModelSetICs
     end do
     !stop
 
+! [to-dev] 1. PFLOTRAN material properties; 2.PFLOTRAN TH_MODE
 !     do local_id=1, grid%nlmax
 !       ghosted_id=grid%nL2G(local_id)
 !       sat_pf_p(local_id)=global_aux_vars(ghosted_id)%sat(1)
@@ -2781,11 +2792,14 @@ end subroutine OutputHDF5WriteSnapShotAtts
   ! Date: 9/10/2010
   !
 
+    use Simulation_Base_class, only : simulation_base_type
+    use Simulation_Subsurface_class, only : simulation_subsurface_type
     use Factory_PFLOTRAN_module, only : FactoryPFLOTRANFinalize
     use Mapping_module, only : MappingDestroy
     use Communicator_Aux_module
     use Factory_Forward_module
     use Driver_class
+    use Timestepper_Base_class        , only : TS_STOP_END_SIMULATION
 
     implicit none
 
@@ -2793,11 +2807,21 @@ end subroutine OutputHDF5WriteSnapShotAtts
     PetscInt :: iflag
     type(comm_type), pointer :: comm
     class(driver_type), pointer :: driver
+    type(simulation_base_type), pointer :: simulation
 
     ! FIXME(bja, 2013-07) none of the mapping information appears to
     ! be cleaned up, so we are leaking memory....
 
     driver => model%simulation%driver
+
+    select type (simulation => model%simulation)
+      class is (simulation_subsurface_type)
+         simulation%stop_flag = TS_STOP_END_SIMULATION
+      class default
+         model%option%io_buffer = "ERROR: pflotranModelDestroy only works on subsurface simulations."
+         call PrintErrMsg(model%option)
+    end select
+
     call model%simulation%FinalizeRun()
     call SimulationBaseDestroy(model%simulation)
 
@@ -2829,7 +2853,7 @@ end subroutine OutputHDF5WriteSnapShotAtts
     call FactoryPFLOTRANFinalize(driver)
     iflag = driver%exit_code
     call DriverDestroy(driver)
-    call exit(iflag)
+    !call exit(iflag)
 
   end subroutine pflotranModelDestroy
 

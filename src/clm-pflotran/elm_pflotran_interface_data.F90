@@ -48,12 +48,12 @@ module elm_pflotran_interface_data
   Vec :: area_top_face_pfp  ! mpi vec
   Vec :: area_top_face_elms ! seq vec
 
-  ! ! Area of top face of ELM domain (projected)
-  ! to do, for elm flux convert to pflotran source sink
+  ! Area of top face of ELM domain (projected area of PFLOTRAN surface)
+  ! for elm flux convert to pflotran source sink
   ! Vec :: area_proj_top_face_elmp ! mpi vec
   ! Vec :: area_proj_top_face_pfs  ! seq vec
   ! Vec :: area_proj_top_face_pfp  ! mpi vec
-  ! Vec :: area_proj_top_face_elms ! seq vec
+  Vec :: area_proj_top_face_elms ! seq vec, to replace area_top_face_elms used in ExternalModelPFLOTRAN.F90
 
   ! cell IDs
   Vec :: pfgrid_nG2A_pfs ! mpi vec
@@ -259,6 +259,7 @@ contains
 
     elm_pf_idata%area_top_face_pfp  = PETSC_NULL_VEC
     elm_pf_idata%area_top_face_elms = PETSC_NULL_VEC
+    elm_pf_idata%area_proj_top_face_elms = PETSC_NULL_VEC
 
     elm_pf_idata%pfgrid_nG2A_pfs = PETSC_NULL_VEC
 
@@ -435,6 +436,8 @@ contains
                       ierr);CHKERRQ(ierr)
     call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%thetares2_elm, &
                       ierr);CHKERRQ(ierr)
+    call VecDuplicate(elm_pf_idata%sat_elms,elm_pf_idata%area_proj_top_face_elms, &
+                      ierr);CHKERRQ(ierr)
 
     ! 2D Surface PFLOTRAN ---to--- 2D Surface ELM
     call VecCreateSeq(PETSC_COMM_SELF,elm_pf_idata%nlelm_2dsub,elm_pf_idata%h2osfc_elm, &
@@ -534,6 +537,8 @@ contains
       call VecDestroy(elm_pf_idata%area_top_face_pfp,ierr);CHKERRQ(ierr)
     if(elm_pf_idata%area_top_face_elms  /= PETSC_NULL_VEC) &
       call VecDestroy(elm_pf_idata%area_top_face_elms,ierr);CHKERRQ(ierr)
+    if(elm_pf_idata%area_proj_top_face_elms  /= PETSC_NULL_VEC) &
+      call VecDestroy(elm_pf_idata%area_proj_top_face_elms,ierr);CHKERRQ(ierr)
 
     if(elm_pf_idata%pfgrid_nG2A_pfs  /= PETSC_NULL_VEC) call VecDestroy(elm_pf_idata%pfgrid_nG2A_pfs,ierr)
 

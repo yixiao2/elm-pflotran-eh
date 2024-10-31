@@ -604,8 +604,8 @@ end subroutine pflotranModelSetICs
                                     elm_pf_idata%bsw_pf)
 
     call MappingSourceToDestination(pflotran_model%map_elm_sub_to_pf_extended_sub, &
-                                    elm_pf_idata%watsat_elm, &
-                                    elm_pf_idata%watsat_pf)
+                                    elm_pf_idata%watsat_elmp, &
+                                    elm_pf_idata%watsat_pfs)
 
     call VecGetArrayF90(elm_pf_idata%hksat_x_pf,hksat_x_pf_loc, &
                         ierr);CHKERRQ(ierr)
@@ -615,7 +615,7 @@ end subroutine pflotranModelSetICs
                         ierr);CHKERRQ(ierr)
     call VecGetArrayF90(elm_pf_idata%sucsat_pf,sucsat_pf_loc, &
                         ierr);CHKERRQ(ierr)
-    call VecGetArrayF90(elm_pf_idata%watsat_pf,watsat_pf_loc, &
+    call VecGetArrayF90(elm_pf_idata%watsat_pfs,watsat_pf_loc, &
                         ierr);CHKERRQ(ierr)
     call VecGetArrayF90(elm_pf_idata%bsw_pf,bsw_pf_loc,ierr);CHKERRQ(ierr)
 
@@ -676,7 +676,7 @@ end subroutine pflotranModelSetICs
                             ierr);CHKERRQ(ierr)
     call VecRestoreArrayF90(elm_pf_idata%sucsat_pf,sucsat_pf_loc, &
                             ierr);CHKERRQ(ierr)
-    call VecRestoreArrayF90(elm_pf_idata%watsat_pf,watsat_pf_loc, &
+    call VecRestoreArrayF90(elm_pf_idata%watsat_pfs,watsat_pf_loc, &
                             ierr);CHKERRQ(ierr)
     call VecRestoreArrayF90(elm_pf_idata%bsw_pf,bsw_pf_loc, &
                             ierr);CHKERRQ(ierr)
@@ -814,10 +814,10 @@ end subroutine pflotranModelSetICs
                         ierr);CHKERRQ(ierr)
     call VecGetArrayF90(elm_pf_idata%sucsat2_pf,sucsat2_pf_loc, &
                         ierr);CHKERRQ(ierr)
-    call VecGetArrayF90(elm_pf_idata%watsat2_pf,watsat2_pf_loc, &
+    call VecGetArrayF90(elm_pf_idata%watsat2_pfp,watsat2_pf_loc, &
                         ierr);CHKERRQ(ierr)
     call VecGetArrayF90(elm_pf_idata%bsw2_pf,bsw2_pf_loc,ierr);CHKERRQ(ierr)
-    call VecGetArrayF90(elm_pf_idata%thetares2_pf,thetares2_pf_loc, &
+    call VecGetArrayF90(elm_pf_idata%thetares2_pfp,thetares2_pf_loc, &
                         ierr);CHKERRQ(ierr)
 
     call VecGetArrayF90(porosity_loc,porosity_loc_p,ierr);CHKERRQ(ierr)
@@ -885,10 +885,11 @@ end subroutine pflotranModelSetICs
 
       watsat2_pf_loc(local_id) = porosity_loc_p(ghosted_id)
 
-
       thetares2_pf_loc(local_id) = porosity_loc_p(ghosted_id)*Sr
 
    enddo
+    write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSoilProp] watsat2_pf_loc(:) = ', watsat2_pf_loc
+    write(*,*) '[YX DEBUG][pflotran_model::pflotranModelGetSoilProp] thetares2_pf_loc(:) = ', thetares2_pf_loc
 
     call VecRestoreArrayF90(elm_pf_idata%hksat_x2_pf,hksat_x2_pf_loc, &
                             ierr);CHKERRQ(ierr)
@@ -898,11 +899,11 @@ end subroutine pflotranModelSetICs
                             ierr);CHKERRQ(ierr)
     call VecRestoreArrayF90(elm_pf_idata%sucsat2_pf,sucsat2_pf_loc, &
                             ierr);CHKERRQ(ierr)
-    call VecRestoreArrayF90(elm_pf_idata%watsat2_pf,watsat2_pf_loc, &
+    call VecRestoreArrayF90(elm_pf_idata%watsat2_pfp,watsat2_pf_loc, &
                             ierr);CHKERRQ(ierr)
     call VecRestoreArrayF90(elm_pf_idata%bsw2_pf,bsw2_pf_loc, &
                             ierr);CHKERRQ(ierr)
-    call VecRestoreArrayF90(elm_pf_idata%thetares2_pf,thetares2_pf_loc, &
+    call VecRestoreArrayF90(elm_pf_idata%thetares2_pfp,thetares2_pf_loc, &
                             ierr);CHKERRQ(ierr)
 
     call VecRestoreArrayF90(porosity_loc,porosity_loc_p,ierr);CHKERRQ(ierr)
@@ -931,12 +932,12 @@ end subroutine pflotranModelSetICs
                                     elm_pf_idata%bsw2_elm)
 
     call MappingSourceToDestination(pflotran_model%map_pf_sub_to_elm_sub, &
-                                    elm_pf_idata%watsat2_pf, &
-                                    elm_pf_idata%watsat2_elm)
+                                    elm_pf_idata%watsat2_pfp, &
+                                    elm_pf_idata%watsat2_elms)
 
     call MappingSourceToDestination(pflotran_model%map_pf_sub_to_elm_sub, &
-                                    elm_pf_idata%thetares2_pf, &
-                                    elm_pf_idata%thetares2_elm)
+                                    elm_pf_idata%thetares2_pfp, &
+                                    elm_pf_idata%thetares2_elms)
 
     call VecDestroy(porosity_loc,ierr);CHKERRQ(ierr)
     call VecDestroy(perm_xx_loc,ierr);CHKERRQ(ierr)
